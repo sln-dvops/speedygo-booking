@@ -3,7 +3,7 @@ import { CheckCircle } from "lucide-react"
 
 export function Completed() {
   return (
-    <Card className="w-full bg-white shadow-lg">
+    <Card className="bg-white shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-center text-black">Thank You!</CardTitle>
       </CardHeader>

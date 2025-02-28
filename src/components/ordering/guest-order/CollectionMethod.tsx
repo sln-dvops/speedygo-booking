@@ -33,7 +33,7 @@ export function CollectionMethod({
   setSelectedCollectionMethod,
 }: CollectionMethodProps) {
   return (
-    <Card className="w-full bg-white shadow-lg">
+    <Card className="bg-white shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-black">Collection Method</CardTitle>
       </CardHeader>

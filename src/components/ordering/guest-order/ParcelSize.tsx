@@ -19,7 +19,7 @@ type ParcelSizeProps = {
 
 export function ParcelSize({ onNextStep, selectedParcelSize, setSelectedParcelSize }: ParcelSizeProps) {
   return (
-    <Card className="min-h-[calc(100vh-12rem)] shadow-lg bg-white">
+    <Card className="bg-white shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-black">Parcel Size</CardTitle>
       </CardHeader>

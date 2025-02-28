@@ -16,7 +16,7 @@ type PaymentProps = {
 
 export function Payment({ onPrevStep, selectedParcelSize, selectedCollectionMethod, onNextStep }: PaymentProps) {
   return (
-    <Card className="w-full bg-white shadow-lg">
+    <Card className="bg-white shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-black">Payment</CardTitle>
       </CardHeader>

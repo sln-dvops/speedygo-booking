@@ -14,7 +14,7 @@ type SendFromProps = {
 
 export function SendFrom({ onPrevStep, onNextStep }: SendFromProps) {
   return (
-    <Card className="w-full bg-white shadow-lg">
+    <Card className="bg-white shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-black">Send from</CardTitle>
       </CardHeader>
