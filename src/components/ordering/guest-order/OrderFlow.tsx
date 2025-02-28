@@ -46,22 +46,21 @@ export function OrderFlow() {
       <div className="container mx-auto max-w-[1200px] px-4">
         <div className="relative flex flex-col md:flex-row">
           {/* Progress bar container - desktop only */}
-          <div className="hidden md:block w-0 flex-shrink-0">
+          <div className="hidden lg:block w-0 flex-shrink-0">
             <ProgressBar steps={steps} currentStep={currentStep} />
           </div>
 
           {/* Main content area - centered in page */}
           <main className="flex-1 mx-auto max-w-[800px] w-full">
-            {/* Mobile progress bar */}
-            <div className="md:hidden fixed top-4 left-0 right-0 px-4 z-[5]">
-              <ProgressBar steps={steps} currentStep={currentStep} />
-            </div>
-
-            {/* Content with padding for mobile progress bar */}
-            <div className="pt-24 md:pt-8">
+            <div className="pt-8">
               <h1 className="text-4xl font-extrabold tracking-tight text-black mb-8">
                 Speedy Xpress: Create a delivery order
               </h1>
+
+              {/* Mobile progress bar */}
+              <div className="block lg:hidden mb-6">
+                <ProgressBar steps={steps} currentStep={currentStep} />
+              </div>
 
               <AnimatePresence mode="wait">
                 {currentStep === 1 && (

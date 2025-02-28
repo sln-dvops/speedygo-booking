@@ -17,7 +17,7 @@ export function ProgressBar({ steps, currentStep }: ProgressBarProps) {
   return (
     <>
       {/* DESKTOP VERSION - Vertical progress bar (hidden on mobile) */}
-      <div className="hidden md:block fixed left-[calc(25%-275px)] top-18 w-[60px] flex items-center">
+      <div className="hidden lg:block fixed left-[max(calc(50%-600px),20px)] top-18 w-[60px] flex items-center">
         <div className="relative h-[400px] w-full">
           {/* Container for circles and lines with exact positioning */}
           <div className="absolute inset-0 flex flex-col justify-between py-8">
@@ -102,7 +102,7 @@ export function ProgressBar({ steps, currentStep }: ProgressBarProps) {
       </div>
 
       {/* MOBILE VERSION - Horizontal progress bar (shown only on mobile) */}
-      <div className="md:hidden fixed top-4 left-0 right-0 px-4 z-10">
+      <div className="lg:hidden w-full">
         <div className="relative h-[80px] w-full bg-yellow-400 rounded-lg p-4 shadow-md">
           {/* Container for circles and lines with horizontal layout */}
           <div className="absolute inset-0 flex items-center px-4">
