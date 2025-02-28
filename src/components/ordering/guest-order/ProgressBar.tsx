@@ -17,7 +17,7 @@ export function ProgressBar({ steps, currentStep }: ProgressBarProps) {
   return (
     <>
       {/* DESKTOP VERSION - Vertical progress bar (hidden on mobile) */}
-      <div className="hidden md:block fixed left-4 md:left-8 top-18 w-[60px] flex items-center">
+      <div className="hidden md:block fixed left-[calc(25%-275px)] top-18 w-[60px] flex items-center">
         <div className="relative h-[400px] w-full">
           {/* Container for circles and lines with exact positioning */}
           <div className="absolute inset-0 flex flex-col justify-between py-8">
@@ -91,7 +91,7 @@ export function ProgressBar({ steps, currentStep }: ProgressBarProps) {
                     color: currentStep >= step.id ? "rgb(0 0 0)" : "rgb(0 0 0 / 0.5)",
                   }}
                   transition={{ duration: 0.3 }}
-                  className="absolute left-14 whitespace-nowrap text-sm font-medium"
+                  className="absolute left-16 whitespace-nowrap text-sm font-medium"
                 >
                   {step.name}
                 </motion.span>
@@ -107,7 +107,7 @@ export function ProgressBar({ steps, currentStep }: ProgressBarProps) {
           {/* Container for circles and lines with horizontal layout */}
           <div className="absolute inset-0 flex items-center px-4">
             {/* Background line container */}
-            <div className="absolute inset-0 flex items-center px-8 pointer-events-none">
+            <div className="absolute inset-0 flex items-center px-2 pointer-events-none">
               <div className="relative w-full">
                 {/* Static background line - horizontal line behind the progress */}
                 <div

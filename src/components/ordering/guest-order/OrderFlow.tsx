@@ -43,17 +43,15 @@ export function OrderFlow() {
 
   return (
     <div className="min-h-screen bg-yellow-400">
-      <div className="container mx-auto">
+      <div className="container mx-auto max-w-[1200px] px-4">
         <div className="relative flex flex-col md:flex-row">
-          {/* Progress bar container */}
-          <div className="hidden md:block w-[300px] absolute left-8">
-            <div className="fixed pt-[7.5rem]">
-              <ProgressBar steps={steps} currentStep={currentStep} />
-            </div>
+          {/* Progress bar container - desktop only */}
+          <div className="hidden md:block w-0 flex-shrink-0">
+            <ProgressBar steps={steps} currentStep={currentStep} />
           </div>
 
-          {/* Main content area */}
-          <main className="flex-1 px-4 md:pl-[calc(300px+2rem)] md:pr-8">
+          {/* Main content area - centered in page */}
+          <main className="flex-1 mx-auto max-w-[800px] w-full">
             {/* Mobile progress bar */}
             <div className="md:hidden fixed top-4 left-0 right-0 px-4 z-[5]">
               <ProgressBar steps={steps} currentStep={currentStep} />
