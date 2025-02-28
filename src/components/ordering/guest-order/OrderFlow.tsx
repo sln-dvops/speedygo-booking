@@ -43,14 +43,20 @@ export function OrderFlow() {
 
   return (
     <div className="min-h-screen bg-yellow-400">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 md:py-8 pt-24 md:pt-8">
+        {/* Added pt-24 for mobile to make space for the horizontal progress bar */}
         <div className="flex flex-col lg:flex-row gap-8">
-          <div className="lg:w-64 flex-shrink-0">
+          <div className="lg:w-64 flex-shrink-0 hidden md:block">
+            {/* Hide this container on mobile since we now have the horizontal bar */}
             <div className="lg:sticky lg:top-8">
               <ProgressBar steps={steps} currentStep={currentStep} />
             </div>
           </div>
           <div className="flex-grow">
+            {/* Show ProgressBar for all screen sizes - the component handles responsive display */}
+            <div className="md:hidden">
+              <ProgressBar steps={steps} currentStep={currentStep} />
+            </div>
             <h1 className="text-4xl font-extrabold tracking-tight text-black mb-8">
               Speedy Xpress: Create a delivery order
             </h1>
