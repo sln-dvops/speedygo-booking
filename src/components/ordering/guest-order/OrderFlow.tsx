@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges"
 import { UnsavedChangesDialog } from "@/components/UnsavedChangesDialog"
 import { ProgressBar } from "@/components/ordering/guest-order/ProgressBar"
-import { ParcelSize } from "@/components/ordering/guest-order/ParcelSize"
+import { ParcelDimensions } from "@/components/ordering/guest-order/ParcelSize"
 import { CollectionMethod } from "@/components/ordering/guest-order/CollectionMethod"
 import { SendFrom } from "@/components/ordering/guest-order/SendFrom"
 import { SendTo } from "@/components/ordering/guest-order/SendTo"
@@ -14,17 +14,16 @@ import { Payment } from "@/components/ordering/guest-order/Payment"
 import { Completed } from "@/components/ordering/guest-order/Completed"
 import { Waybill } from "@/components/ordering/guest-order/Waybill"
 
-import type { ParcelSize as ParcelSizeType, CollectionMethod as CollectionMethodType } from "@/types/pricing"
+import type { CollectionMethod as CollectionMethodType, ParcelDimensions as ParcelDimensionsType } from "@/types/pricing"
 import type { OrderDetails, PartialOrderDetails } from "@/types/order"
 import type { AddressFormData } from "@/components/ordering/guest-order/AddressForm"
-import type { ParcelDimensions } from "@/types/parcel"
-import type { DeliveryMethod } from "@/types/delivery"
+import type { DeliveryMethod } from "@/types/pricing"
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7
 
 export function OrderFlow() {
   const [currentStep, setCurrentStep] = useState<Step>(1)
-  const [selectedParcelSize, setSelectedParcelSize] = useState<ParcelSizeType | null>(null)
+  const [selectedParcelSize] = useState<ParcelDimensionsType | null>(null)
   const [selectedCollectionMethod, setSelectedCollectionMethod] = useState<CollectionMethodType | null>(null)
   const [orderDetails, setOrderDetails] = useState<PartialOrderDetails>({
     orderNumber: "",
@@ -55,7 +54,7 @@ export function OrderFlow() {
     unitNo: "",
     postalCode: "",
   })
-  const [selectedDimensions, setSelectedDimensions] = useState<ParcelDimensions | null>(null)
+  const [selectedDimensions, setSelectedDimensions] = useState<ParcelDimensionsType | null>(null)
   const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState<DeliveryMethod | null>(null)
 
   const searchParams = useSearchParams()
@@ -184,17 +183,15 @@ export function OrderFlow() {
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <ParcelSize
+                      <ParcelDimensions
                         onNextStep={handleNextStep}
                         selectedDimensions={selectedDimensions}
                         setSelectedDimensions={setSelectedDimensions}
-                        selectedDeliveryMethod={selectedDeliveryMethod}
-                        setSelectedDeliveryMethod={setSelectedDeliveryMethod}
                       />
                     </motion.div>
                   )}
 
-                  {currentStep === 2 && selectedParcelSize && (
+                  {currentStep === 2 && selectedDimensions && (
                     <motion.div
                       key="collection-method"
                       initial={{ opacity: 0, y: 20 }}
@@ -205,9 +202,11 @@ export function OrderFlow() {
                       <CollectionMethod
                         onPrevStep={handlePrevStep}
                         onNextStep={handleNextStep}
-                        selectedParcelSize={selectedParcelSize}
+                        selectedDimensions={selectedDimensions as ParcelDimensionsType}
                         selectedCollectionMethod={selectedCollectionMethod}
                         setSelectedCollectionMethod={setSelectedCollectionMethod}
+                        selectedDeliveryMethod={selectedDeliveryMethod}
+                        setSelectedDeliveryMethod={setSelectedDeliveryMethod}
                       />
                     </motion.div>
                   )}
