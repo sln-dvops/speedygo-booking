@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -12,14 +14,30 @@ type PaymentProps = {
   selectedParcelSize: ParcelSize | null
   selectedCollectionMethod: CollectionMethod | null
   orderDetails: {
+    orderNumber: string
     senderName: string
     senderAddress: string
     recipientName: string
     recipientAddress: string
   }
+  setOrderDetails: React.Dispatch<
+    React.SetStateAction<{
+      orderNumber: string
+      senderName: string
+      senderAddress: string
+      recipientName: string
+      recipientAddress: string
+    }>
+  >
 }
 
-export function Payment({ onPrevStep, selectedParcelSize, selectedCollectionMethod, orderDetails }: PaymentProps) {
+export function Payment({
+  onPrevStep,
+  selectedParcelSize,
+  selectedCollectionMethod,
+  orderDetails,
+  setOrderDetails,
+}: PaymentProps) {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 

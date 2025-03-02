@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-
 import { ProgressBar } from "@/components/ordering/guest-order/ProgressBar"
 import { ParcelSize } from "@/components/ordering/guest-order/ParcelSize"
 import { CollectionMethod } from "@/components/ordering/guest-order/CollectionMethod"
@@ -175,6 +174,7 @@ export function OrderFlow() {
                         recipientAddress={orderDetails.recipientAddress}
                         parcelSize={selectedParcelSize || ""}
                         collectionMethod={selectedCollectionMethod || ""}
+                        qrCode=""
                       />
                       <div className="mt-6 flex justify-between">
                         <button

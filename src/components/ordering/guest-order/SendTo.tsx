@@ -5,13 +5,41 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import type React from "react"
 
 type SendToProps = {
   onPrevStep: () => void
   onNextStep: () => void
+  setOrderDetails: React.Dispatch<
+    React.SetStateAction<{
+      orderNumber: string
+      senderName: string
+      senderAddress: string
+      recipientName: string
+      recipientAddress: string
+    }>
+  >
 }
 
-export function SendTo({ onPrevStep, onNextStep }: SendToProps) {
+export function SendTo({ onPrevStep, onNextStep, setOrderDetails }: SendToProps) {
+  const handleNext = () => {
+    const recipientName = document.getElementById("recipientName") as HTMLInputElement
+    const recipientContact = document.getElementById("recipientContact") as HTMLInputElement
+    const recipientEmail = document.getElementById("recipientEmail") as HTMLInputElement
+    const recipientStreet = document.getElementById("recipientStreet") as HTMLInputElement
+    const recipientUnitNo = document.getElementById("recipientUnitNo") as HTMLInputElement
+    const recipientPostalCode = document.getElementById("recipientPostalCode") as HTMLInputElement
+
+    const recipientAddress = `${recipientStreet.value}, #${recipientUnitNo.value}, ${recipientPostalCode.value}, Singapore`
+
+    setOrderDetails((prevDetails) => ({
+      ...prevDetails,
+      recipientName: recipientName.value,
+      recipientAddress: recipientAddress,
+    }))
+    onNextStep()
+  }
+
   return (
     <Card className="bg-white shadow-lg">
       <CardHeader>
@@ -82,7 +110,7 @@ export function SendTo({ onPrevStep, onNextStep }: SendToProps) {
         <Button variant="outline" onClick={onPrevStep} className="border-black text-black hover:bg-yellow-100">
           Back
         </Button>
-        <Button onClick={onNextStep} className="bg-black hover:bg-black/90 text-yellow-400">
+        <Button onClick={handleNext} className="bg-black hover:bg-black/90 text-yellow-400">
           Next
         </Button>
       </CardFooter>
