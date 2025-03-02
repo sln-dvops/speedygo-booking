@@ -17,6 +17,8 @@ import { Waybill } from "@/components/ordering/guest-order/Waybill"
 import type { ParcelSize as ParcelSizeType, CollectionMethod as CollectionMethodType } from "@/types/pricing"
 import type { OrderDetails, PartialOrderDetails } from "@/types/order"
 import type { AddressFormData } from "@/components/ordering/guest-order/AddressForm"
+import type { ParcelDimensions } from "@/types/parcel"
+import type { DeliveryMethod } from "@/types/delivery"
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7
 
@@ -53,6 +55,8 @@ export function OrderFlow() {
     unitNo: "",
     postalCode: "",
   })
+  const [selectedDimensions, setSelectedDimensions] = useState<ParcelDimensions | null>(null)
+  const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState<DeliveryMethod | null>(null)
 
   const searchParams = useSearchParams()
   const { setUnsavedChanges, isDialogOpen, handleConfirmNavigation, handleCancelNavigation } = useUnsavedChanges()
@@ -73,10 +77,21 @@ export function OrderFlow() {
       selectedCollectionMethod !== null ||
       Object.values(senderFormData).some((value) => value !== "") ||
       Object.values(recipientFormData).some((value) => value !== "") ||
-      Object.values(orderDetails).some((value) => value !== "" && value !== null)
+      Object.values(orderDetails).some((value) => value !== "" && value !== null) ||
+      selectedDimensions !== null ||
+      selectedDeliveryMethod !== null
 
     setUnsavedChanges(hasUnsavedChanges)
-  }, [selectedParcelSize, selectedCollectionMethod, senderFormData, recipientFormData, orderDetails, setUnsavedChanges])
+  }, [
+    selectedParcelSize,
+    selectedCollectionMethod,
+    senderFormData,
+    recipientFormData,
+    orderDetails,
+    setUnsavedChanges,
+    selectedDimensions,
+    selectedDeliveryMethod,
+  ])
 
   const fetchOrderDetails = async (orderId: string) => {
     try {
@@ -171,8 +186,10 @@ export function OrderFlow() {
                     >
                       <ParcelSize
                         onNextStep={handleNextStep}
-                        selectedParcelSize={selectedParcelSize}
-                        setSelectedParcelSize={setSelectedParcelSize}
+                        selectedDimensions={selectedDimensions}
+                        setSelectedDimensions={setSelectedDimensions}
+                        selectedDeliveryMethod={selectedDeliveryMethod}
+                        setSelectedDeliveryMethod={setSelectedDeliveryMethod}
                       />
                     </motion.div>
                   )}
