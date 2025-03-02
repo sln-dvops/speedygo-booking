@@ -1,6 +1,6 @@
 "use client"
 import Link from "next/link"
-import { Info, MapPin, TruckIcon as TruckDelivery } from "lucide-react"
+import { Info } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,98 +15,35 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
-import type { CollectionMethod, DeliveryMethod, ParcelDimensions } from "@/types/pricing"
+import type { DeliveryMethod, ParcelDimensions } from "@/types/pricing"
 import { calculateShippingPrice } from "@/types/pricing"
 
-type CollectionMethodProps = {
+type DeliveryMethodProps = {
   onPrevStep: () => void
   onNextStep: () => void
   selectedDimensions: ParcelDimensions
-  selectedCollectionMethod: CollectionMethod | null
-  setSelectedCollectionMethod: (method: CollectionMethod) => void
   selectedDeliveryMethod: DeliveryMethod | null
   setSelectedDeliveryMethod: (method: DeliveryMethod) => void
 }
 
-export function CollectionMethod({
+export function DeliveryMethod({
   onPrevStep,
   onNextStep,
   selectedDimensions,
-  selectedCollectionMethod,
-  setSelectedCollectionMethod,
   selectedDeliveryMethod,
   setSelectedDeliveryMethod,
-}: CollectionMethodProps) {
-  const handleCollectionMethodSelect = (method: CollectionMethod) => {
-    setSelectedCollectionMethod(method)
-  }
-
-  const handleDeliveryMethodSelect = (method: DeliveryMethod) => {
-    setSelectedDeliveryMethod(method)
-  }
-
-  const price = selectedDeliveryMethod ? calculateShippingPrice(selectedDimensions, selectedDeliveryMethod) : 0
-
+}: DeliveryMethodProps) {
   return (
     <Card className="bg-white shadow-lg">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-black">Collection and Delivery Method</CardTitle>
+        <CardTitle className="text-2xl font-bold text-black">Delivery Method</CardTitle>
       </CardHeader>
       <CardContent className="p-6 space-y-6">
-        <div>
-          <h3 className="font-medium text-lg text-black mb-4">Collection Method</h3>
-          <RadioGroup
-            value={selectedCollectionMethod || ""}
-            onValueChange={(value) => handleCollectionMethodSelect(value as CollectionMethod)}
-            className="grid gap-4"
-          >
-            <Label
-              htmlFor="dropoff"
-              className={`border border-black rounded-md p-6 cursor-pointer hover:bg-yellow-100 transition-colors ${
-                selectedCollectionMethod === "dropoff" ? "bg-yellow-200" : ""
-              }`}
-            >
-              <RadioGroupItem value="dropoff" id="dropoff" className="sr-only" />
-              <div className="flex items-center">
-                <div className="flex items-center flex-1 mr-8">
-                  <div className="mr-4 bg-yellow-400 p-3 rounded-full">
-                    <MapPin className="w-8 h-8 text-black" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-lg text-black mb-1">Drop off</h3>
-                    <p className="text-gray-600">Drop off your parcel at any Ninja Point island-wide.</p>
-                  </div>
-                </div>
-              </div>
-            </Label>
-
-            <Label
-              htmlFor="pickup"
-              className={`border border-black rounded-md p-6 cursor-pointer hover:bg-yellow-100 transition-colors ${
-                selectedCollectionMethod === "pickup" ? "bg-yellow-200" : ""
-              }`}
-            >
-              <RadioGroupItem value="pickup" id="pickup" className="sr-only" />
-              <div className="flex items-center">
-                <div className="flex items-center flex-1 mr-8">
-                  <div className="mr-4 bg-yellow-400 p-3 rounded-full">
-                    <TruckDelivery className="w-8 h-8 text-black" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-lg text-black mb-1">Pick up</h3>
-                    <p className="text-gray-600">Let us pick up your parcel right from your doorstep.</p>
-                  </div>
-                </div>
-              </div>
-            </Label>
-          </RadioGroup>
-        </div>
-
         <div>
           <h3 className="font-medium text-lg text-black mb-4">Delivery Method</h3>
           <RadioGroup
             value={selectedDeliveryMethod || ""}
-            onValueChange={(value) => handleDeliveryMethodSelect(value as DeliveryMethod)}
+            onValueChange={(value) => setSelectedDeliveryMethod(value as DeliveryMethod)}
             className="grid gap-4"
           >
             <Label
@@ -143,7 +80,9 @@ export function CollectionMethod({
 
         {selectedDeliveryMethod && (
           <div className="mt-4 p-4 bg-yellow-100 rounded-lg">
-            <p className="text-lg font-medium text-black">Total Price: ${price.toFixed(2)}</p>
+            <p className="text-lg font-medium text-black">
+              Total Price: ${calculateShippingPrice(selectedDimensions, selectedDeliveryMethod).toFixed(2)}
+            </p>
           </div>
         )}
 
@@ -201,7 +140,7 @@ export function CollectionMethod({
         <Button
           onClick={onNextStep}
           className="bg-black hover:bg-black/90 text-yellow-400"
-          disabled={!selectedCollectionMethod || !selectedDeliveryMethod}
+          disabled={!selectedDeliveryMethod}
         >
           Next
         </Button>

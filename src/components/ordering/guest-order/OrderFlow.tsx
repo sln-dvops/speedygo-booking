@@ -7,24 +7,22 @@ import { useUnsavedChanges } from "@/hooks/useUnsavedChanges"
 import { UnsavedChangesDialog } from "@/components/UnsavedChangesDialog"
 import { ProgressBar } from "@/components/ordering/guest-order/ProgressBar"
 import { ParcelDimensions } from "@/components/ordering/guest-order/ParcelSize"
-import { CollectionMethod } from "@/components/ordering/guest-order/CollectionMethod"
+import { DeliveryMethod } from "@/components/ordering/guest-order/DeliveryMethod"
 import { SendFrom } from "@/components/ordering/guest-order/SendFrom"
 import { SendTo } from "@/components/ordering/guest-order/SendTo"
 import { Payment } from "@/components/ordering/guest-order/Payment"
 import { Completed } from "@/components/ordering/guest-order/Completed"
 import { Waybill } from "@/components/ordering/guest-order/Waybill"
 
-import type { CollectionMethod as CollectionMethodType, ParcelDimensions as ParcelDimensionsType } from "@/types/pricing"
+import type { ParcelDimensions as ParcelDimensionsType, DeliveryMethod as DeliveryMethodType } from "@/types/pricing"
 import type { OrderDetails, PartialOrderDetails } from "@/types/order"
 import type { AddressFormData } from "@/components/ordering/guest-order/AddressForm"
-import type { DeliveryMethod } from "@/types/pricing"
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7
 
 export function OrderFlow() {
   const [currentStep, setCurrentStep] = useState<Step>(1)
-  const [selectedParcelSize] = useState<ParcelDimensionsType | null>(null)
-  const [selectedCollectionMethod, setSelectedCollectionMethod] = useState<CollectionMethodType | null>(null)
+  const [selectedDimensions, setSelectedDimensions] = useState<ParcelDimensionsType | null>(null)
   const [orderDetails, setOrderDetails] = useState<PartialOrderDetails>({
     orderNumber: "",
     senderName: "",
@@ -35,8 +33,8 @@ export function OrderFlow() {
     recipientAddress: "",
     recipientContactNumber: "",
     recipientEmail: "",
-    parcelSize: null,
-    collectionMethod: null,
+    parcelSize: "",
+    deliveryMethod: null,
   })
   const [senderFormData, setSenderFormData] = useState<AddressFormData>({
     name: "",
@@ -54,8 +52,7 @@ export function OrderFlow() {
     unitNo: "",
     postalCode: "",
   })
-  const [selectedDimensions, setSelectedDimensions] = useState<ParcelDimensionsType | null>(null)
-  const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState<DeliveryMethod | null>(null)
+  const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState<DeliveryMethodType | null>(null)
 
   const searchParams = useSearchParams()
   const { setUnsavedChanges, isDialogOpen, handleConfirmNavigation, handleCancelNavigation } = useUnsavedChanges()
@@ -72,25 +69,14 @@ export function OrderFlow() {
   useEffect(() => {
     // Check if there are any unsaved changes
     const hasUnsavedChanges =
-      selectedParcelSize !== null ||
-      selectedCollectionMethod !== null ||
+      selectedDimensions !== null ||
       Object.values(senderFormData).some((value) => value !== "") ||
       Object.values(recipientFormData).some((value) => value !== "") ||
       Object.values(orderDetails).some((value) => value !== "" && value !== null) ||
-      selectedDimensions !== null ||
       selectedDeliveryMethod !== null
 
     setUnsavedChanges(hasUnsavedChanges)
-  }, [
-    selectedParcelSize,
-    selectedCollectionMethod,
-    senderFormData,
-    recipientFormData,
-    orderDetails,
-    setUnsavedChanges,
-    selectedDimensions,
-    selectedDeliveryMethod,
-  ])
+  }, [selectedDimensions, senderFormData, recipientFormData, orderDetails, setUnsavedChanges, selectedDeliveryMethod])
 
   const fetchOrderDetails = async (orderId: string) => {
     try {
@@ -109,7 +95,7 @@ export function OrderFlow() {
 
   const steps = [
     { id: 1, name: "Parcel Size" },
-    { id: 2, name: "Collection Method" },
+    { id: 2, name: "Delivery Method" },
     { id: 3, name: "Send from" },
     { id: 4, name: "Send to" },
     { id: 5, name: "Payment" },
@@ -193,18 +179,16 @@ export function OrderFlow() {
 
                   {currentStep === 2 && selectedDimensions && (
                     <motion.div
-                      key="collection-method"
+                      key="delivery-method"
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <CollectionMethod
+                      <DeliveryMethod
                         onPrevStep={handlePrevStep}
                         onNextStep={handleNextStep}
                         selectedDimensions={selectedDimensions as ParcelDimensionsType}
-                        selectedCollectionMethod={selectedCollectionMethod}
-                        setSelectedCollectionMethod={setSelectedCollectionMethod}
                         selectedDeliveryMethod={selectedDeliveryMethod}
                         setSelectedDeliveryMethod={setSelectedDeliveryMethod}
                       />
@@ -257,8 +241,8 @@ export function OrderFlow() {
                         onPrevStep={handlePrevStep}
                         orderDetails={orderDetails as OrderDetails}
                         setOrderDetails={setOrderDetails}
-                        selectedParcelSize={selectedParcelSize}
-                        selectedCollectionMethod={selectedCollectionMethod}
+                        selectedDimensions={selectedDimensions}
+                        selectedDeliveryMethod={selectedDeliveryMethod}
                       />
                     </motion.div>
                   )}
@@ -281,7 +265,7 @@ export function OrderFlow() {
                           recipientName={orderDetails.recipientName || ""}
                           recipientAddress={orderDetails.recipientAddress || ""}
                           parcelSize={orderDetails.parcelSize || ""}
-                          collectionMethod={orderDetails.collectionMethod || ""}
+                          deliveryMethod={orderDetails.deliveryMethod || null}
                           qrCode=""
                         />
                         <div className="mt-6 flex justify-between">

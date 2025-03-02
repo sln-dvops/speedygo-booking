@@ -7,23 +7,24 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { initiatePayment } from "@/app/actions/ordering/guest-order/payment"
-import { PRICING } from "@/types/pricing"
-import type { OrderDetails, PartialOrderDetails, ParcelSize, CollectionMethod } from "@/types/order"
+import { calculateShippingPrice } from "@/types/pricing"
+import type { OrderDetails, PartialOrderDetails } from "@/types/order"
+import type { ParcelDimensions, DeliveryMethod } from "@/types/pricing"
 
 type PaymentProps = {
   onPrevStep: () => void
   orderDetails: PartialOrderDetails
   setOrderDetails: React.Dispatch<React.SetStateAction<PartialOrderDetails>>
-  selectedParcelSize: ParcelSize | null
-  selectedCollectionMethod: CollectionMethod | null
+  selectedDimensions: ParcelDimensions | null
+  selectedDeliveryMethod: DeliveryMethod | null
 }
 
 export function Payment({
   onPrevStep,
   orderDetails,
   setOrderDetails,
-  selectedParcelSize,
-  selectedCollectionMethod,
+  selectedDimensions,
+  selectedDeliveryMethod,
 }: PaymentProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -33,8 +34,8 @@ export function Payment({
     setIsLoading(true)
     setError(null)
 
-    if (!selectedParcelSize || !selectedCollectionMethod) {
-      setError("Please select a parcel size and collection method.")
+    if (!selectedDimensions || !selectedDeliveryMethod) {
+      setError("Please select parcel dimensions and delivery method.")
       setIsLoading(false)
       return
     }
@@ -46,12 +47,12 @@ export function Payment({
     }
 
     try {
-      const amount = PRICING[selectedParcelSize][selectedCollectionMethod].discounted
+      const amount = calculateShippingPrice(selectedDimensions, selectedDeliveryMethod)
 
       const updatedOrderDetails: OrderDetails = {
         ...orderDetails,
-        parcelSize: selectedParcelSize,
-        collectionMethod: selectedCollectionMethod,
+        parcelSize: `${selectedDimensions.weight}kg`,
+        deliveryMethod: selectedDeliveryMethod,
         orderNumber: `ORDER-${Date.now()}`, // Generate a temporary order number
       } as OrderDetails
 
@@ -82,17 +83,17 @@ export function Payment({
           <div className="border-t border-b border-black py-4">
             <div className="flex justify-between mb-2 text-black">
               <span>Parcel Size</span>
-              <span>Up to {selectedParcelSize}</span>
+              <span>{selectedDimensions ? `${selectedDimensions.weight}kg` : "Not selected"}</span>
             </div>
             <div className="flex justify-between mb-2 text-black">
-              <span>Collection Method</span>
-              <span>{selectedCollectionMethod === "dropoff" ? "Drop off" : "Pick up"}</span>
+              <span>Delivery Method</span>
+              <span>{selectedDeliveryMethod || "Not selected"}</span>
             </div>
             <div className="flex justify-between font-medium text-black">
               <span>Total</span>
               <span className="text-black">
-                {selectedParcelSize && selectedCollectionMethod
-                  ? `S$${PRICING[selectedParcelSize][selectedCollectionMethod].discounted.toFixed(2)}`
+                {selectedDimensions && selectedDeliveryMethod
+                  ? `S$${calculateShippingPrice(selectedDimensions, selectedDeliveryMethod).toFixed(2)}`
                   : "S$0.00"}
               </span>
             </div>

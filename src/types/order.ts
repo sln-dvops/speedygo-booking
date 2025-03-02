@@ -1,6 +1,6 @@
-import type { ParcelSize, CollectionMethod } from "./pricing"
+import type { ParcelDimensions, DeliveryMethod } from "./pricing"
 
-export type { ParcelSize, CollectionMethod }
+export type { ParcelDimensions, DeliveryMethod }
 
 export interface OrderDetails {
   orderNumber: string
@@ -12,8 +12,8 @@ export interface OrderDetails {
   recipientAddress: string
   recipientContactNumber: string
   recipientEmail: string
-  parcelSize: ParcelSize | null
-  collectionMethod: CollectionMethod | null
+  parcelSize: string // Changed from ParcelSize | null to string
+  deliveryMethod: DeliveryMethod | null // Changed from collectionMethod
 }
 
 export type PartialOrderDetails = Partial<OrderDetails>

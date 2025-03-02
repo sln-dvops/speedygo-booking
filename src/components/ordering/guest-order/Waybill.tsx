@@ -1,5 +1,6 @@
 import Image from "next/image"
 import Barcode from "react-barcode"
+import type { DeliveryMethod } from "@/types/pricing"
 
 type WaybillProps = {
   orderNumber: string
@@ -8,7 +9,7 @@ type WaybillProps = {
   recipientName: string
   recipientAddress: string
   parcelSize: string
-  collectionMethod: string
+  deliveryMethod: DeliveryMethod | null
   qrCode: string
 }
 
@@ -19,7 +20,7 @@ export function Waybill({
   recipientName,
   recipientAddress,
   parcelSize,
-  collectionMethod,
+  deliveryMethod,
   qrCode,
 }: WaybillProps) {
   return (
@@ -50,7 +51,7 @@ export function Waybill({
           <strong>Parcel Size:</strong> {parcelSize}
         </p>
         <p>
-          <strong>Collection Method:</strong> {collectionMethod}
+          <strong>Delivery Method:</strong> {deliveryMethod || "Not specified"}
         </p>
       </div>
 
