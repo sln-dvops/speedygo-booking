@@ -33,6 +33,9 @@ export function OrderFlow() {
     recipientAddress: "",
     recipientContactNumber: "",
     recipientEmail: "",
+    recipientLine1: "",
+    recipientLine2: "",
+    recipientPostalCode: "",
     parcelSize: "",
     deliveryMethod: null,
   })
@@ -67,16 +70,25 @@ export function OrderFlow() {
   }, [searchParams])
 
   useEffect(() => {
-    // Check if there are any unsaved changes
+    // Check if there are any unsaved changes only for steps 1 to 5
     const hasUnsavedChanges =
-      selectedDimensions !== null ||
-      Object.values(senderFormData).some((value) => value !== "") ||
-      Object.values(recipientFormData).some((value) => value !== "") ||
-      Object.values(orderDetails).some((value) => value !== "" && value !== null) ||
-      selectedDeliveryMethod !== null
+      currentStep <= 5 &&
+      (selectedDimensions !== null ||
+        Object.values(senderFormData).some((value) => value !== "") ||
+        Object.values(recipientFormData).some((value) => value !== "") ||
+        Object.values(orderDetails).some((value) => value !== "" && value !== null) ||
+        selectedDeliveryMethod !== null)
 
     setUnsavedChanges(hasUnsavedChanges)
-  }, [selectedDimensions, senderFormData, recipientFormData, orderDetails, setUnsavedChanges, selectedDeliveryMethod])
+  }, [
+    currentStep,
+    selectedDimensions,
+    senderFormData,
+    recipientFormData,
+    orderDetails,
+    setUnsavedChanges,
+    selectedDeliveryMethod,
+  ])
 
   const fetchOrderDetails = async (orderId: string) => {
     try {
@@ -138,7 +150,14 @@ export function OrderFlow() {
       recipientAddress: `${data.street}, ${data.unitNo}, ${data.postalCode}, Singapore`,
       recipientContactNumber: data.contactNumber,
       recipientEmail: data.email,
+      recipientLine1: data.street,
+      recipientLine2: data.unitNo,
+      recipientPostalCode: data.postalCode,
     }))
+  }
+
+  const clearUnsavedChanges = () => {
+    setUnsavedChanges(false)
   }
 
   return (
@@ -243,6 +262,7 @@ export function OrderFlow() {
                         setOrderDetails={setOrderDetails}
                         selectedDimensions={selectedDimensions}
                         selectedDeliveryMethod={selectedDeliveryMethod}
+                        clearUnsavedChanges={clearUnsavedChanges}
                       />
                     </motion.div>
                   )}

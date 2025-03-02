@@ -17,6 +17,7 @@ type PaymentProps = {
   setOrderDetails: React.Dispatch<React.SetStateAction<PartialOrderDetails>>
   selectedDimensions: ParcelDimensions | null
   selectedDeliveryMethod: DeliveryMethod | null
+  clearUnsavedChanges: () => void
 }
 
 export function Payment({
@@ -25,6 +26,7 @@ export function Payment({
   setOrderDetails,
   selectedDimensions,
   selectedDeliveryMethod,
+  clearUnsavedChanges,
 }: PaymentProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -63,6 +65,7 @@ export function Payment({
         orderDetails: updatedOrderDetails,
       })
 
+      clearUnsavedChanges() // Clear unsaved changes before redirecting
       router.push(paymentUrl)
     } catch (error) {
       console.error("Payment initiation failed:", error)

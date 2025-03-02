@@ -14,6 +14,9 @@ export interface OrderDetails {
   recipientEmail: string
   parcelSize: string // Changed from ParcelSize | null to string
   deliveryMethod: DeliveryMethod | null // Changed from collectionMethod
+  recipientLine1: string
+  recipientLine2: string
+  recipientPostalCode: string
 }
 
 export type PartialOrderDetails = Partial<OrderDetails>
@@ -36,6 +39,15 @@ export interface HitPayRequestBody {
     city: string
     state: string
     country: string
+  }
+  recipient_address: {
+    line1: string
+    line2: string
+    postal_code: string
+    city: string
+    state: string
+    country: string
+    recipient: string
   }
   allow_repeated_payments: boolean
   send_email: boolean

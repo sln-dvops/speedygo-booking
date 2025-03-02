@@ -1,35 +1,38 @@
 import type { OrderDetails, HitPayRequestBody } from "@/types/order"
 
 export const createHitPayRequestBody = (amount: number, orderDetails: OrderDetails): HitPayRequestBody => {
-  const addressParts = orderDetails.senderAddress?.split(",").map((part) => part.trim()) || []
-  const postalCode = addressParts.pop() || ""
-  const line2 = addressParts.pop() || ""
-  const line1 = addressParts.join(", ") || ""
-
   return {
     amount,
     currency: "SGD",
     payment_methods: ["paynow_online"], // Add other payment methods as needed
-    email: orderDetails.senderEmail || "",
-    name: orderDetails.senderName || "",
-    phone: orderDetails.senderContactNumber || "",
-    reference_number: orderDetails.orderNumber || `ORDER-${Date.now()}`,
-    redirect_url: `${process.env.NEXT_PUBLIC_BASE_URL}`,
+    email: orderDetails.senderEmail,
+    name: orderDetails.senderName,
+    phone: orderDetails.senderContactNumber,
+    reference_number: orderDetails.orderNumber,
+    redirect_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
     webhook: `${process.env.NEXT_PUBLIC_BASE_URL}/api/hitpay/webhook`,
-    allow_repeated_payments: false,
+    purpose: "Speedy Xpress Delivery",
     send_email: true,
     send_sms: false,
-    purpose: "Speedy Xpress Delivery",
+    allow_repeated_payments: false,
     address: {
-      line1,
-      line2,
-      postal_code: postalCode,
+      line1: orderDetails.senderAddress.split(",")[0] || "",
+      line2: orderDetails.senderAddress.split(",")[1] || "",
+      postal_code: orderDetails.senderAddress.split(",").pop()?.trim() || "",
       city: "Singapore",
-      state: "Singapore", // Adding the required state field
+      state: "Singapore",
       country: "SG",
+    },
+    // Add recipient address details
+    recipient_address: {
+      line1: orderDetails.recipientAddress.split(",")[0] || "",
+      line2: orderDetails.recipientAddress.split(",")[1] || "",
+      postal_code: orderDetails.recipientAddress.split(",").pop()?.trim() || "",
+      city: "Singapore",
+      state: "Singapore",
+      country: "SG",
+      recipient: orderDetails.recipientName,
     },
   }
 }
-
-
 
