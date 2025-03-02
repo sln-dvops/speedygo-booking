@@ -12,6 +12,7 @@ import { Completed } from "@/components/ordering/guest-order/Completed"
 import { Waybill } from "@/components/ordering/guest-order/Waybill"
 
 import type { ParcelSize as ParcelSizeType, CollectionMethod as CollectionMethodType } from "@/types/pricing"
+import type { OrderDetails, PartialOrderDetails } from "@/types/order"
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7
 
@@ -19,12 +20,18 @@ export function OrderFlow() {
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [selectedParcelSize, setSelectedParcelSize] = useState<ParcelSizeType | null>(null)
   const [selectedCollectionMethod, setSelectedCollectionMethod] = useState<CollectionMethodType | null>(null)
-  const [orderDetails, setOrderDetails] = useState({
+  const [orderDetails, setOrderDetails] = useState<PartialOrderDetails>({
     orderNumber: "",
     senderName: "",
     senderAddress: "",
+    senderContactNumber: "",
+    senderEmail: "",
     recipientName: "",
     recipientAddress: "",
+    recipientContactNumber: "",
+    recipientEmail: "",
+    parcelSize: null,
+    collectionMethod: null,
   })
 
   const steps = [
@@ -147,10 +154,10 @@ export function OrderFlow() {
                   >
                     <Payment
                       onPrevStep={handlePrevStep}
-                      onNextStep={handleNextStep}
+                      orderDetails={orderDetails as OrderDetails}
+                      setOrderDetails={setOrderDetails}
                       selectedParcelSize={selectedParcelSize}
                       selectedCollectionMethod={selectedCollectionMethod}
-                      setOrderDetails={setOrderDetails}
                     />
                   </motion.div>
                 )}
@@ -167,13 +174,13 @@ export function OrderFlow() {
                       <h2 className="text-2xl font-bold mb-4">Your Waybill</h2>
                       <p className="mb-4">Please print this waybill and attach it to your parcel.</p>
                       <Waybill
-                        orderNumber={orderDetails.orderNumber}
-                        senderName={orderDetails.senderName}
-                        senderAddress={orderDetails.senderAddress}
-                        recipientName={orderDetails.recipientName}
-                        recipientAddress={orderDetails.recipientAddress}
-                        parcelSize={selectedParcelSize || ""}
-                        collectionMethod={selectedCollectionMethod || ""}
+                        orderNumber={orderDetails.orderNumber || ""}
+                        senderName={orderDetails.senderName || ""}
+                        senderAddress={orderDetails.senderAddress || ""}
+                        recipientName={orderDetails.recipientName || ""}
+                        recipientAddress={orderDetails.recipientAddress || ""}
+                        parcelSize={orderDetails.parcelSize || ""}
+                        collectionMethod={orderDetails.collectionMethod || ""}
                         qrCode=""
                       />
                       <div className="mt-6 flex justify-between">

@@ -7,58 +7,65 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { initiatePayment } from "@/app/actions/ordering/guest-order/payment"
-import { PRICING, type ParcelSize, type CollectionMethod } from "@/types/pricing"
+import { PRICING } from "@/types/pricing"
+import type { OrderDetails, PartialOrderDetails, ParcelSize, CollectionMethod } from "@/types/order"
 
 type PaymentProps = {
   onPrevStep: () => void
+  orderDetails: PartialOrderDetails
+  setOrderDetails: React.Dispatch<React.SetStateAction<PartialOrderDetails>>
   selectedParcelSize: ParcelSize | null
   selectedCollectionMethod: CollectionMethod | null
-  orderDetails: {
-    orderNumber: string
-    senderName: string
-    senderAddress: string
-    recipientName: string
-    recipientAddress: string
-  }
-  setOrderDetails: React.Dispatch<
-    React.SetStateAction<{
-      orderNumber: string
-      senderName: string
-      senderAddress: string
-      recipientName: string
-      recipientAddress: string
-    }>
-  >
 }
 
 export function Payment({
   onPrevStep,
-  selectedParcelSize,
-  selectedCollectionMethod,
   orderDetails,
   setOrderDetails,
+  selectedParcelSize,
+  selectedCollectionMethod,
 }: PaymentProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
   const handlePayment = async () => {
     setIsLoading(true)
-    try {
-      const amount =
-        selectedParcelSize && selectedCollectionMethod
-          ? PRICING[selectedParcelSize][selectedCollectionMethod].discounted
-          : 0
+    setError(null)
 
-      const paymentUrl = await initiatePayment({
-        amount,
+    if (!selectedParcelSize || !selectedCollectionMethod) {
+      setError("Please select a parcel size and collection method.")
+      setIsLoading(false)
+      return
+    }
+
+    if (!orderDetails.senderEmail || !orderDetails.senderName) {
+      setError("Sender information is incomplete. Please go back and fill in all required fields.")
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      const amount = PRICING[selectedParcelSize][selectedCollectionMethod].discounted
+
+      const updatedOrderDetails: OrderDetails = {
         ...orderDetails,
         parcelSize: selectedParcelSize,
         collectionMethod: selectedCollectionMethod,
+        orderNumber: `ORDER-${Date.now()}`, // Generate a temporary order number
+      } as OrderDetails
+
+      setOrderDetails(updatedOrderDetails)
+
+      const paymentUrl = await initiatePayment({
+        amount,
+        orderDetails: updatedOrderDetails,
       })
 
       router.push(paymentUrl)
     } catch (error) {
       console.error("Payment initiation failed:", error)
+      setError("Failed to initiate payment. Please try again.")
       setIsLoading(false)
     }
   }
@@ -95,6 +102,13 @@ export function Payment({
             <h3 className="font-medium mb-4 text-black">Payment Method</h3>
             <p className="text-black">You will be redirected to HitPay to complete your payment securely.</p>
           </div>
+
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+              <strong className="font-bold">Error: </strong>
+              <span className="block sm:inline">{error}</span>
+            </div>
+          )}
         </div>
       </CardContent>
       <CardFooter className="px-6 py-4 flex justify-between">

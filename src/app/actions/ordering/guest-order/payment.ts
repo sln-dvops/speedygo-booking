@@ -1,17 +1,37 @@
 "use server"
 
-import { createHitPayRequestBody, type PaymentDetails } from "@/config/hitpay"
+import { createHitPayRequestBody } from "@/config/hitpay"
+import type { OrderDetails } from "@/types/order"
 
-export async function initiatePayment(paymentDetails: PaymentDetails) {
+type PaymentInitiationDetails = {
+  amount: number
+  orderDetails: OrderDetails
+}
+
+export async function initiatePayment({ amount, orderDetails }: PaymentInitiationDetails) {
   try {
+    // Validate required fields
+    if (!orderDetails.senderEmail || !orderDetails.senderName || !orderDetails.orderNumber) {
+      throw new Error("Missing required order details")
+    }
+
     // Store the order details in your database here
-    const orderId = await storeOrderDetails(paymentDetails)
+    const orderId = await storeOrderDetails(orderDetails)
 
     // Create the request body using the configuration
-    const requestBody = createHitPayRequestBody(paymentDetails.amount, paymentDetails.senderName, orderId)
+    const requestBody = createHitPayRequestBody(amount, {
+      ...orderDetails,
+      orderNumber: orderId,
+    })
+
+    // Determine the API endpoint based on the environment
+    const apiEndpoint =
+      process.env.NODE_ENV === "production"
+        ? "https://api.hit-pay.com/v1/payment-requests"
+        : "https://api.sandbox.hit-pay.com/v1/payment-requests"
 
     // Initiate payment with HitPay API
-    const response = await fetch("https://api.hitpay.com/v1/payment-requests", {
+    const response = await fetch(apiEndpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -21,7 +41,8 @@ export async function initiatePayment(paymentDetails: PaymentDetails) {
     })
 
     if (!response.ok) {
-      throw new Error("Failed to initiate payment")
+      const errorText = await response.text()
+      throw new Error(`Failed to initiate payment: ${response.status} ${response.statusText}\n${errorText}`)
     }
 
     const data = await response.json()
@@ -32,9 +53,9 @@ export async function initiatePayment(paymentDetails: PaymentDetails) {
   }
 }
 
-async function storeOrderDetails(paymentDetails: PaymentDetails) {
+async function storeOrderDetails(orderDetails: OrderDetails): Promise<string> {
   // Implement your database storage logic here
   // Return a unique order ID
-  return "order_" + Math.random().toString(36).substr(2, 9)
+  return orderDetails.orderNumber || `ORDER-${Date.now()}`
 }
 

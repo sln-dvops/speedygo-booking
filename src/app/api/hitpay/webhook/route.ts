@@ -1,52 +1,33 @@
-import { NextResponse } from "next/server"
-import { createDetrackJob, generateWaybill } from "@/lib/shipping"
+import type { OrderDetails, HitPayRequestBody } from "@/types/order"
 
-export async function POST(request: Request) {
-  const body = await request.json()
+export const createHitPayRequestBody = (amount: number, orderDetails: OrderDetails): HitPayRequestBody => {
+  const addressParts = orderDetails.senderAddress?.split(",").map((part) => part.trim()) || []
+  const postalCode = addressParts.pop() || ""
+  const line2 = addressParts.pop() || ""
+  const line1 = addressParts.join(", ") || ""
 
-  // Verify the webhook signature (implement this based on HitPay's documentation)
-  if (!verifyWebhookSignature(request)) {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
-  }
-
-  if (body.status === "completed") {
-    try {
-      // Retrieve order details from your database using body.reference (orderId)
-      const orderDetails = await getOrderDetails(body.reference)
-
-      // Create Detrack job
-      const detrackId = await createDetrackJob(orderDetails)
-
-      // Generate waybill
-      await generateWaybill(detrackId, orderDetails)
-
-      // Update order status in your database
-      await updateOrderStatus(body.reference, "paid")
-
-      return NextResponse.json({ success: true })
-    } catch (error) {
-      console.error("Error processing webhook:", error)
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 })
-    }
-  }
-
-  return NextResponse.json({ success: true })
-}
-
-function verifyWebhookSignature(request: Request) {
-  // Implement webhook signature verification
-  // Refer to HitPay's documentation for this
-  return true
-}
-
-async function getOrderDetails(orderId: string) {
-  // Implement fetching order details from your database
   return {
-    /* order details */
+    amount,
+    currency: "SGD",
+    payment_methods: ["paynow_online"], // Add other payment methods as needed
+    email: orderDetails.senderEmail || "",
+    name: orderDetails.senderName || "",
+    phone: orderDetails.senderContactNumber || "",
+    reference_number: orderDetails.orderNumber || `ORDER-${Date.now()}`,
+    redirect_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success?order=${orderDetails.orderNumber}`,
+    webhook: `${process.env.NEXT_PUBLIC_BASE_URL}/api/hitpay/webhook`,
+    allow_repeated_payments: false,
+    send_email: true,
+    send_sms: false,
+    purpose: "Speedy Xpress Delivery",
+    address: {
+      line1,
+      line2,
+      postal_code: postalCode,
+      city: "Singapore",
+      state: "Singapore",
+      country: "SG",
+    },
   }
-}
-
-async function updateOrderStatus(orderId: string, status: string) {
-  // Implement updating order status in your database
 }
 

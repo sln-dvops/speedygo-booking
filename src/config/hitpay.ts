@@ -1,31 +1,35 @@
-export interface PaymentDetails {
-    amount: number
-    senderName: string
-    senderAddress: string
-    recipientName: string
-    recipientAddress: string
-    parcelSize: string | null
-    collectionMethod: string | null
-  }
-  
-  export interface HitPayRequestBody {
-    amount: number
-    currency: string
-    email: string
-    name: string
-    reference: string
-    redirect_url: string
-    webhook: string
-  }
-  
-  export const createHitPayRequestBody = (amount: number, name: string, reference: string): HitPayRequestBody => ({
+import type { OrderDetails, HitPayRequestBody } from "@/types/order"
+
+export const createHitPayRequestBody = (amount: number, orderDetails: OrderDetails): HitPayRequestBody => {
+  const addressParts = orderDetails.senderAddress?.split(",").map((part) => part.trim()) || []
+  const postalCode = addressParts.pop() || ""
+  const line2 = addressParts.pop() || ""
+  const line1 = addressParts.join(", ") || ""
+
+  return {
     amount,
     currency: "SGD",
-    email: "customer@example.com", // You should collect this from the customer
-    name,
-    reference,
-    redirect_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
+    payment_methods: ["paynow_online"], // Add other payment methods as needed
+    email: orderDetails.senderEmail || "",
+    name: orderDetails.senderName || "",
+    phone: orderDetails.senderContactNumber || "",
+    reference_number: orderDetails.orderNumber || `ORDER-${Date.now()}`,
+    redirect_url: `${process.env.NEXT_PUBLIC_BASE_URL}`,
     webhook: `${process.env.NEXT_PUBLIC_BASE_URL}/api/hitpay/webhook`,
-  })
-  
-  
+    allow_repeated_payments: false,
+    send_email: true,
+    send_sms: false,
+    purpose: "Speedy Xpress Delivery",
+    address: {
+      line1,
+      line2,
+      postal_code: postalCode,
+      city: "Singapore",
+      state: "Singapore", // Adding the required state field
+      country: "SG",
+    },
+  }
+}
+
+
+
