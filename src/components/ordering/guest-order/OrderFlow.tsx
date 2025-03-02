@@ -10,15 +10,23 @@ import { SendFrom } from "@/components/ordering/guest-order/SendFrom"
 import { SendTo } from "@/components/ordering/guest-order/SendTo"
 import { Payment } from "@/components/ordering/guest-order/Payment"
 import { Completed } from "@/components/ordering/guest-order/Completed"
+import { Waybill } from "@/components/ordering/guest-order/Waybill"
 
 import type { ParcelSize as ParcelSizeType, CollectionMethod as CollectionMethodType } from "@/types/pricing"
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7
 
 export function OrderFlow() {
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [selectedParcelSize, setSelectedParcelSize] = useState<ParcelSizeType | null>(null)
   const [selectedCollectionMethod, setSelectedCollectionMethod] = useState<CollectionMethodType | null>(null)
+  const [orderDetails, setOrderDetails] = useState({
+    orderNumber: "",
+    senderName: "",
+    senderAddress: "",
+    recipientName: "",
+    recipientAddress: "",
+  })
 
   const steps = [
     { id: 1, name: "Parcel Size" },
@@ -26,11 +34,12 @@ export function OrderFlow() {
     { id: 3, name: "Send from" },
     { id: 4, name: "Send to" },
     { id: 5, name: "Payment" },
-    { id: 6, name: "Completed" },
+    { id: 6, name: "Waybill" },
+    { id: 7, name: "Completed" },
   ]
 
   const handleNextStep = () => {
-    if (currentStep < 6) {
+    if (currentStep < 7) {
       setCurrentStep((prevStep) => (prevStep + 1) as Step)
     }
   }
@@ -39,6 +48,10 @@ export function OrderFlow() {
     if (currentStep > 1) {
       setCurrentStep((prevStep) => (prevStep - 1) as Step)
     }
+  }
+
+  const handlePrintWaybill = () => {
+    window.print()
   }
 
   return (
@@ -105,7 +118,11 @@ export function OrderFlow() {
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <SendFrom onPrevStep={handlePrevStep} onNextStep={handleNextStep} />
+                    <SendFrom
+                      onPrevStep={handlePrevStep}
+                      onNextStep={handleNextStep}
+                      setOrderDetails={setOrderDetails}
+                    />
                   </motion.div>
                 )}
 
@@ -117,7 +134,7 @@ export function OrderFlow() {
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <SendTo onPrevStep={handlePrevStep} onNextStep={handleNextStep} />
+                    <SendTo onPrevStep={handlePrevStep} onNextStep={handleNextStep} setOrderDetails={setOrderDetails} />
                   </motion.div>
                 )}
 
@@ -134,11 +151,50 @@ export function OrderFlow() {
                       onNextStep={handleNextStep}
                       selectedParcelSize={selectedParcelSize}
                       selectedCollectionMethod={selectedCollectionMethod}
+                      setOrderDetails={setOrderDetails}
                     />
                   </motion.div>
                 )}
 
                 {currentStep === 6 && (
+                  <motion.div
+                    key="waybill"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div className="bg-white p-6 rounded-lg shadow-lg">
+                      <h2 className="text-2xl font-bold mb-4">Your Waybill</h2>
+                      <p className="mb-4">Please print this waybill and attach it to your parcel.</p>
+                      <Waybill
+                        orderNumber={orderDetails.orderNumber}
+                        senderName={orderDetails.senderName}
+                        senderAddress={orderDetails.senderAddress}
+                        recipientName={orderDetails.recipientName}
+                        recipientAddress={orderDetails.recipientAddress}
+                        parcelSize={selectedParcelSize || ""}
+                        collectionMethod={selectedCollectionMethod || ""}
+                      />
+                      <div className="mt-6 flex justify-between">
+                        <button
+                          onClick={handlePrintWaybill}
+                          className="bg-black text-yellow-400 px-6 py-2 rounded-md hover:bg-black/90"
+                        >
+                          Print Waybill
+                        </button>
+                        <button
+                          onClick={handleNextStep}
+                          className="bg-black text-yellow-400 px-6 py-2 rounded-md hover:bg-black/90"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {currentStep === 7 && (
                   <motion.div
                     key="completed"
                     initial={{ opacity: 0, y: 20 }}

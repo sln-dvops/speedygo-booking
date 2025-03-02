@@ -1,20 +1,50 @@
 "use client"
 
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-
+import { initiatePayment } from "@/app/actions/ordering/guest-order/payment"
 import { PRICING, type ParcelSize, type CollectionMethod } from "@/types/pricing"
 
 type PaymentProps = {
   onPrevStep: () => void
   selectedParcelSize: ParcelSize | null
   selectedCollectionMethod: CollectionMethod | null
-  onNextStep: () => void
+  orderDetails: {
+    senderName: string
+    senderAddress: string
+    recipientName: string
+    recipientAddress: string
+  }
 }
 
-export function Payment({ onPrevStep, selectedParcelSize, selectedCollectionMethod, onNextStep }: PaymentProps) {
+export function Payment({ onPrevStep, selectedParcelSize, selectedCollectionMethod, orderDetails }: PaymentProps) {
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
+
+  const handlePayment = async () => {
+    setIsLoading(true)
+    try {
+      const amount =
+        selectedParcelSize && selectedCollectionMethod
+          ? PRICING[selectedParcelSize][selectedCollectionMethod].discounted
+          : 0
+
+      const paymentUrl = await initiatePayment({
+        amount,
+        ...orderDetails,
+        parcelSize: selectedParcelSize,
+        collectionMethod: selectedCollectionMethod,
+      })
+
+      router.push(paymentUrl)
+    } catch (error) {
+      console.error("Payment initiation failed:", error)
+      setIsLoading(false)
+    }
+  }
+
   return (
     <Card className="bg-white shadow-lg">
       <CardHeader>
@@ -45,20 +75,7 @@ export function Payment({ onPrevStep, selectedParcelSize, selectedCollectionMeth
 
           <div>
             <h3 className="font-medium mb-4 text-black">Payment Method</h3>
-            <RadioGroup defaultValue="card">
-              <div className="flex items-center space-x-2 border border-black p-3 rounded-md mb-2 hover:bg-yellow-100">
-                <RadioGroupItem value="card" id="card" />
-                <Label htmlFor="card" className="text-black">
-                  Credit/Debit Card
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 border border-black p-3 rounded-md hover:bg-yellow-100">
-                <RadioGroupItem value="paynow" id="paynow" />
-                <Label htmlFor="paynow" className="text-black">
-                  PayNow
-                </Label>
-              </div>
-            </RadioGroup>
+            <p className="text-black">You will be redirected to HitPay to complete your payment securely.</p>
           </div>
         </div>
       </CardContent>
@@ -66,8 +83,8 @@ export function Payment({ onPrevStep, selectedParcelSize, selectedCollectionMeth
         <Button variant="outline" onClick={onPrevStep} className="border-black text-black hover:bg-yellow-100">
           Back
         </Button>
-        <Button onClick={onNextStep} className="bg-black hover:bg-black/90 text-yellow-400">
-          Complete Order
+        <Button onClick={handlePayment} className="bg-black hover:bg-black/90 text-yellow-400" disabled={isLoading}>
+          {isLoading ? "Processing..." : "Proceed to Payment"}
         </Button>
       </CardFooter>
     </Card>
