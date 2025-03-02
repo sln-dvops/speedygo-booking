@@ -28,15 +28,6 @@ type AddressFormProps = {
   defaultValues?: Partial<AddressFormData>
 }
 
-const defaultFormValues: AddressFormData = {
-  name: "",
-  contactNumber: "",
-  email: "",
-  street: "",
-  unitNo: "",
-  postalCode: "",
-}
-
 export function AddressForm({
   title,
   nameLabel,
@@ -48,7 +39,7 @@ export function AddressForm({
   const methods = useForm<AddressFormData>({
     resolver: zodResolver(addressSchema),
     mode: "onChange",
-    defaultValues: { ...defaultFormValues, ...defaultValues },
+    defaultValues: defaultValues, // Use the provided default values
   })
 
   const onSubmit = (data: AddressFormData) => {

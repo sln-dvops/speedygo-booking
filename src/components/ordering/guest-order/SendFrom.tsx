@@ -1,25 +1,16 @@
 "use client"
-
-import type React from "react"
 import { AddressForm, type AddressFormData } from "./AddressForm"
-import type { PartialOrderDetails } from "@/types/order"
 
 type SendFromProps = {
   onPrevStep: () => void
   onNextStep: () => void
-  setOrderDetails: React.Dispatch<React.SetStateAction<PartialOrderDetails>>
+  formData: AddressFormData
+  updateFormData: (data: AddressFormData) => void
 }
 
-export function SendFrom({ onPrevStep, onNextStep, setOrderDetails }: SendFromProps) {
+export function SendFrom({ onPrevStep, onNextStep, formData, updateFormData }: SendFromProps) {
   const handleNextStep = (data: AddressFormData) => {
-    const senderAddress = `${data.street}, ${data.unitNo}, ${data.postalCode}`
-    setOrderDetails((prevDetails) => ({
-      ...prevDetails,
-      senderName: data.name,
-      senderAddress,
-      senderContactNumber: data.contactNumber,
-      senderEmail: data.email,
-    }))
+    updateFormData(data)
     onNextStep()
   }
 
@@ -30,6 +21,7 @@ export function SendFrom({ onPrevStep, onNextStep, setOrderDetails }: SendFromPr
       namePlaceholder="Name of sender"
       onPrevStep={onPrevStep}
       onNextStep={handleNextStep}
+      defaultValues={formData}
     />
   )
 }

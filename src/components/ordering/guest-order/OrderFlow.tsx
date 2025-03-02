@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { ProgressBar } from "@/components/ordering/guest-order/ProgressBar"
 import { ParcelSize } from "@/components/ordering/guest-order/ParcelSize"
@@ -13,6 +14,7 @@ import { Waybill } from "@/components/ordering/guest-order/Waybill"
 
 import type { ParcelSize as ParcelSizeType, CollectionMethod as CollectionMethodType } from "@/types/pricing"
 import type { OrderDetails, PartialOrderDetails } from "@/types/order"
+import type { AddressFormData } from "@/components/ordering/guest-order/AddressForm"
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7
 
@@ -33,6 +35,48 @@ export function OrderFlow() {
     parcelSize: null,
     collectionMethod: null,
   })
+  const [senderFormData, setSenderFormData] = useState<AddressFormData>({
+    name: "",
+    contactNumber: "",
+    email: "",
+    street: "",
+    unitNo: "",
+    postalCode: "",
+  })
+  const [recipientFormData, setRecipientFormData] = useState<AddressFormData>({
+    name: "",
+    contactNumber: "",
+    email: "",
+    street: "",
+    unitNo: "",
+    postalCode: "",
+  })
+
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const orderId = searchParams.get("order")
+    const paymentReference = searchParams.get("reference")
+
+    if (orderId && paymentReference) {
+      fetchOrderDetails(orderId)
+    }
+  }, [searchParams])
+
+  const fetchOrderDetails = async (orderId: string) => {
+    try {
+      const response = await fetch(`/api/payment/success?order=${orderId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setOrderDetails(data.orderDetails)
+        setCurrentStep(6) // Show waybill step
+      } else {
+        console.error("Failed to fetch order details")
+      }
+    } catch (error) {
+      console.error("Error fetching order details:", error)
+    }
+  }
 
   const steps = [
     { id: 1, name: "Parcel Size" },
@@ -60,23 +104,42 @@ export function OrderFlow() {
     window.print()
   }
 
+  const updateSenderFormData = (data: AddressFormData) => {
+    setSenderFormData(data)
+    setOrderDetails((prevDetails) => ({
+      ...prevDetails,
+      senderName: data.name,
+      senderAddress: `${data.street}, ${data.unitNo}, ${data.postalCode}`,
+      senderContactNumber: data.contactNumber,
+      senderEmail: data.email,
+    }))
+  }
+
+  const updateRecipientFormData = (data: AddressFormData) => {
+    setRecipientFormData(data)
+    setOrderDetails((prevDetails) => ({
+      ...prevDetails,
+      recipientName: data.name,
+      recipientAddress: `${data.street}, ${data.unitNo}, ${data.postalCode}, Singapore`,
+      recipientContactNumber: data.contactNumber,
+      recipientEmail: data.email,
+    }))
+  }
+
   return (
     <div className="min-h-screen bg-yellow-400">
       <div className="container mx-auto max-w-[1200px] px-4">
         <div className="relative flex flex-col md:flex-row">
-          {/* Progress bar container - desktop only */}
           <div className="hidden lg:block w-0 flex-shrink-0">
             <ProgressBar steps={steps} currentStep={currentStep} />
           </div>
 
-          {/* Main content area - centered in page */}
           <main className="flex-1 mx-auto max-w-[800px] w-full">
             <div className="pt-8">
               <h1 className="text-4xl font-extrabold tracking-tight text-black mb-8">
                 Speedy Xpress: Create a delivery order
               </h1>
 
-              {/* Mobile progress bar */}
               <div className="block lg:hidden mb-6">
                 <ProgressBar steps={steps} currentStep={currentStep} />
               </div>
@@ -127,7 +190,8 @@ export function OrderFlow() {
                     <SendFrom
                       onPrevStep={handlePrevStep}
                       onNextStep={handleNextStep}
-                      setOrderDetails={setOrderDetails}
+                      formData={senderFormData}
+                      updateFormData={updateSenderFormData}
                     />
                   </motion.div>
                 )}
@@ -140,7 +204,12 @@ export function OrderFlow() {
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <SendTo onPrevStep={handlePrevStep} onNextStep={handleNextStep} setOrderDetails={setOrderDetails} />
+                    <SendTo
+                      onPrevStep={handlePrevStep}
+                      onNextStep={handleNextStep}
+                      formData={recipientFormData}
+                      updateFormData={updateRecipientFormData}
+                    />
                   </motion.div>
                 )}
 
@@ -191,7 +260,7 @@ export function OrderFlow() {
                           Print Waybill
                         </button>
                         <button
-                          onClick={handleNextStep}
+                          onClick={() => setCurrentStep(7)}
                           className="bg-black text-yellow-400 px-6 py-2 rounded-md hover:bg-black/90"
                         >
                           Next
