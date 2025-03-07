@@ -1,28 +1,24 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges"
 import { UnsavedChangesDialog } from "@/components/UnsavedChangesDialog"
-import { ProgressBar } from "@/components/ordering/guest-order/ProgressBar"
 import { ParcelDimensions } from "@/components/ordering/guest-order/ParcelSize"
 import { DeliveryMethod } from "@/components/ordering/guest-order/DeliveryMethod"
 import { SendFrom } from "@/components/ordering/guest-order/SendFrom"
 import { SendTo } from "@/components/ordering/guest-order/SendTo"
 import { Payment } from "@/components/ordering/guest-order/Payment"
-import { Completed } from "@/components/ordering/guest-order/Completed"
-import { Waybill } from "@/components/ordering/guest-order/Waybill"
 
 import type { ParcelDimensions as ParcelDimensionsType, DeliveryMethod as DeliveryMethodType } from "@/types/pricing"
 import type { OrderDetails, PartialOrderDetails } from "@/types/order"
 import type { AddressFormData } from "@/components/ordering/guest-order/AddressForm"
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7
+type Step = 1 | 2 | 3 | 4 | 5
 
 export function OrderFlow() {
   const [currentStep, setCurrentStep] = useState<Step>(1)
-  const [selectedDimensions, setSelectedDimensions] = useState<ParcelDimensionsType | null>(null)
+  const [selectedDimensions, setSelectedDimensions] = useState<ParcelDimensionsType[] | null>(null)
   const [orderDetails, setOrderDetails] = useState<PartialOrderDetails>({
     orderNumber: "",
     senderName: "",
@@ -37,7 +33,8 @@ export function OrderFlow() {
     recipientLine2: "",
     recipientPostalCode: "",
     parcelSize: "",
-    deliveryMethod: null,
+    deliveryMethod: undefined,
+    isBulkOrder: false,
   })
   const [senderFormData, setSenderFormData] = useState<AddressFormData>({
     name: "",
@@ -55,29 +52,18 @@ export function OrderFlow() {
     unitNo: "",
     postalCode: "",
   })
-  const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState<DeliveryMethodType | null>(null)
+  const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState<DeliveryMethodType | undefined>(undefined)
 
-  const searchParams = useSearchParams()
   const { setUnsavedChanges, isDialogOpen, handleConfirmNavigation, handleCancelNavigation } = useUnsavedChanges()
 
   useEffect(() => {
-    const orderId = searchParams.get("order")
-    const paymentReference = searchParams.get("reference")
-
-    if (orderId && paymentReference) {
-      fetchOrderDetails(orderId)
-    }
-  }, [searchParams])
-
-  useEffect(() => {
-    // Check if there are any unsaved changes only for steps 1 to 5
     const hasUnsavedChanges =
       currentStep <= 5 &&
       (selectedDimensions !== null ||
         Object.values(senderFormData).some((value) => value !== "") ||
         Object.values(recipientFormData).some((value) => value !== "") ||
         Object.values(orderDetails).some((value) => value !== "" && value !== null) ||
-        selectedDeliveryMethod !== null)
+        selectedDeliveryMethod !== undefined)
 
     setUnsavedChanges(hasUnsavedChanges)
   }, [
@@ -90,33 +76,23 @@ export function OrderFlow() {
     selectedDeliveryMethod,
   ])
 
-  const fetchOrderDetails = async (orderId: string) => {
-    try {
-      const response = await fetch(`/api/payment/success?order=${orderId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setOrderDetails(data.orderDetails)
-        setCurrentStep(6) // Show waybill step
-      } else {
-        console.error("Failed to fetch order details")
-      }
-    } catch (error) {
-      console.error("Error fetching order details:", error)
+  // Update isBulkOrder whenever selectedDimensions changes
+  useEffect(() => {
+    if (selectedDimensions && selectedDimensions.length > 1) {
+      setOrderDetails((prev) => ({
+        ...prev,
+        isBulkOrder: true,
+      }))
+    } else {
+      setOrderDetails((prev) => ({
+        ...prev,
+        isBulkOrder: false,
+      }))
     }
-  }
-
-  const steps = [
-    { id: 1, name: "Parcel Size" },
-    { id: 2, name: "Delivery Method" },
-    { id: 3, name: "Send from" },
-    { id: 4, name: "Send to" },
-    { id: 5, name: "Payment" },
-    { id: 6, name: "Waybill" },
-    { id: 7, name: "Completed" },
-  ]
+  }, [selectedDimensions])
 
   const handleNextStep = () => {
-    if (currentStep < 7) {
+    if (currentStep < 5) {
       setCurrentStep((prevStep) => (prevStep + 1) as Step)
     }
   }
@@ -125,10 +101,6 @@ export function OrderFlow() {
     if (currentStep > 1) {
       setCurrentStep((prevStep) => (prevStep - 1) as Step)
     }
-  }
-
-  const handlePrintWaybill = () => {
-    window.print()
   }
 
   const updateSenderFormData = (data: AddressFormData) => {
@@ -163,163 +135,103 @@ export function OrderFlow() {
   return (
     <>
       <div className="min-h-screen bg-yellow-400">
-        <div className="container mx-auto max-w-[1200px] px-4">
-          <div className="relative flex flex-col md:flex-row">
-            <div className="hidden lg:block w-0 flex-shrink-0">
-              <ProgressBar steps={steps} currentStep={currentStep} />
-            </div>
+        <div className="container mx-auto max-w-[800px] px-4">
+          <div className="pt-8">
+            <h1 className="text-4xl font-extrabold tracking-tight text-black mb-8">
+              Speedy Xpress: Create a delivery order
+            </h1>
 
-            <main className="flex-1 mx-auto max-w-[800px] w-full">
-              <div className="pt-8">
-                <h1 className="text-4xl font-extrabold tracking-tight text-black mb-8">
-                  Speedy Xpress: Create a delivery order
-                </h1>
+            <AnimatePresence mode="wait">
+              {currentStep === 1 && (
+                <motion.div
+                  key="parcel-size"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ParcelDimensions
+                    onNextStep={handleNextStep}
+                    selectedDimensions={selectedDimensions}
+                    setSelectedDimensions={setSelectedDimensions}
+                  />
+                </motion.div>
+              )}
 
-                <div className="block lg:hidden mb-6">
-                  <ProgressBar steps={steps} currentStep={currentStep} />
-                </div>
+              {currentStep === 2 && selectedDimensions && selectedDimensions.length > 0 && (
+                <motion.div
+                  key="delivery-method"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <DeliveryMethod
+                    onPrevStep={handlePrevStep}
+                    onNextStep={handleNextStep}
+                    selectedDimensions={selectedDimensions[0]} // Pass the first parcel for pricing calculation
+                    isBulkOrder={selectedDimensions.length > 1}
+                    totalParcels={selectedDimensions.length}
+                    totalWeight={selectedDimensions.reduce((sum, parcel) => sum + parcel.weight, 0)}
+                    selectedDeliveryMethod={selectedDeliveryMethod}
+                    setSelectedDeliveryMethod={setSelectedDeliveryMethod}
+                  />
+                </motion.div>
+              )}
 
-                <AnimatePresence mode="wait">
-                  {currentStep === 1 && (
-                    <motion.div
-                      key="parcel-size"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <ParcelDimensions
-                        onNextStep={handleNextStep}
-                        selectedDimensions={selectedDimensions}
-                        setSelectedDimensions={setSelectedDimensions}
-                      />
-                    </motion.div>
-                  )}
+              {currentStep === 3 && (
+                <motion.div
+                  key="send-from"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <SendFrom
+                    onPrevStep={handlePrevStep}
+                    onNextStep={handleNextStep}
+                    formData={senderFormData}
+                    updateFormData={updateSenderFormData}
+                  />
+                </motion.div>
+              )}
 
-                  {currentStep === 2 && selectedDimensions && (
-                    <motion.div
-                      key="delivery-method"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <DeliveryMethod
-                        onPrevStep={handlePrevStep}
-                        onNextStep={handleNextStep}
-                        selectedDimensions={selectedDimensions as ParcelDimensionsType}
-                        selectedDeliveryMethod={selectedDeliveryMethod}
-                        setSelectedDeliveryMethod={setSelectedDeliveryMethod}
-                      />
-                    </motion.div>
-                  )}
+              {currentStep === 4 && (
+                <motion.div
+                  key="send-to"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <SendTo
+                    onPrevStep={handlePrevStep}
+                    onNextStep={handleNextStep}
+                    formData={recipientFormData}
+                    updateFormData={updateRecipientFormData}
+                  />
+                </motion.div>
+              )}
 
-                  {currentStep === 3 && (
-                    <motion.div
-                      key="send-from"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <SendFrom
-                        onPrevStep={handlePrevStep}
-                        onNextStep={handleNextStep}
-                        formData={senderFormData}
-                        updateFormData={updateSenderFormData}
-                      />
-                    </motion.div>
-                  )}
-
-                  {currentStep === 4 && (
-                    <motion.div
-                      key="send-to"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <SendTo
-                        onPrevStep={handlePrevStep}
-                        onNextStep={handleNextStep}
-                        formData={recipientFormData}
-                        updateFormData={updateRecipientFormData}
-                      />
-                    </motion.div>
-                  )}
-
-                  {currentStep === 5 && (
-                    <motion.div
-                      key="payment"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <Payment
-                        onPrevStep={handlePrevStep}
-                        orderDetails={orderDetails as OrderDetails}
-                        setOrderDetails={setOrderDetails}
-                        selectedDimensions={selectedDimensions}
-                        selectedDeliveryMethod={selectedDeliveryMethod}
-                        clearUnsavedChanges={clearUnsavedChanges}
-                      />
-                    </motion.div>
-                  )}
-
-                  {currentStep === 6 && (
-                    <motion.div
-                      key="waybill"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <div className="bg-white p-6 rounded-lg shadow-lg">
-                        <h2 className="text-2xl font-bold mb-4">Your Waybill</h2>
-                        <p className="mb-4">Please print this waybill and attach it to your parcel.</p>
-                        <Waybill
-                          orderNumber={orderDetails.orderNumber || ""}
-                          senderName={orderDetails.senderName || ""}
-                          senderAddress={orderDetails.senderAddress || ""}
-                          recipientName={orderDetails.recipientName || ""}
-                          recipientAddress={orderDetails.recipientAddress || ""}
-                          parcelSize={orderDetails.parcelSize || ""}
-                          deliveryMethod={orderDetails.deliveryMethod || null}
-                          qrCode=""
-                        />
-                        <div className="mt-6 flex justify-between">
-                          <button
-                            onClick={handlePrintWaybill}
-                            className="bg-black text-yellow-400 px-6 py-2 rounded-md hover:bg-black/90"
-                          >
-                            Print Waybill
-                          </button>
-                          <button
-                            onClick={() => setCurrentStep(7)}
-                            className="bg-black text-yellow-400 px-6 py-2 rounded-md hover:bg-black/90"
-                          >
-                            Next
-                          </button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {currentStep === 7 && (
-                    <motion.div
-                      key="completed"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <Completed />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </main>
+              {currentStep === 5 && (
+                <motion.div
+                  key="payment"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Payment
+                    onPrevStep={handlePrevStep}
+                    orderDetails={orderDetails as OrderDetails}
+                    setOrderDetails={setOrderDetails}
+                    selectedDimensions={selectedDimensions}
+                    selectedDeliveryMethod={selectedDeliveryMethod}
+                    clearUnsavedChanges={clearUnsavedChanges}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>

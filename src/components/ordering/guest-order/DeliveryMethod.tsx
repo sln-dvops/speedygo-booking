@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -22,7 +23,10 @@ type DeliveryMethodProps = {
   onPrevStep: () => void
   onNextStep: () => void
   selectedDimensions: ParcelDimensions
-  selectedDeliveryMethod: DeliveryMethod | null
+  isBulkOrder?: boolean
+  totalParcels?: number
+  totalWeight?: number
+  selectedDeliveryMethod: DeliveryMethod | undefined
   setSelectedDeliveryMethod: (method: DeliveryMethod) => void
 }
 
@@ -30,13 +34,41 @@ export function DeliveryMethod({
   onPrevStep,
   onNextStep,
   selectedDimensions,
+  isBulkOrder = false,
+  totalParcels = 1,
+  totalWeight = 0,
   selectedDeliveryMethod,
   setSelectedDeliveryMethod,
 }: DeliveryMethodProps) {
+  // Calculate base price for a single parcel
+  const basePrice = selectedDeliveryMethod ? calculateShippingPrice(selectedDimensions, selectedDeliveryMethod) : 0
+
+  // Calculate bulk order price (no discount)
+  const calculateBulkPrice = () => {
+    if (!selectedDeliveryMethod) return 0
+
+    // Base price for each parcel
+    const pricePerParcel = basePrice
+
+    // Multiply by number of parcels
+    if (isBulkOrder && totalParcels && totalParcels > 0) {
+      return pricePerParcel * totalParcels
+    }
+
+    return basePrice
+  }
+
+  const finalPrice = isBulkOrder ? calculateBulkPrice() : basePrice
+
   return (
     <Card className="bg-white shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-black">Delivery Method</CardTitle>
+        {isBulkOrder && (
+          <Badge variant="outline" className="bg-yellow-200 text-black border-black mt-2">
+            Bulk Order ({totalParcels} Parcels)
+          </Badge>
+        )}
       </CardHeader>
       <CardContent className="p-6 space-y-6">
         <div>
@@ -78,11 +110,29 @@ export function DeliveryMethod({
           </RadioGroup>
         </div>
 
+        {isBulkOrder && selectedDeliveryMethod && (
+          <div className="mt-4 p-4 bg-yellow-100 rounded-lg">
+            <h4 className="font-medium text-black mb-2">Bulk Order Summary</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Total Parcels:</span>
+                <span>{totalParcels}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total Weight:</span>
+                <span>{totalWeight?.toFixed(2)} kg</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Price Per Parcel:</span>
+                <span>${basePrice.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {selectedDeliveryMethod && (
           <div className="mt-4 p-4 bg-yellow-100 rounded-lg">
-            <p className="text-lg font-medium text-black">
-              Total Price: ${calculateShippingPrice(selectedDimensions, selectedDeliveryMethod).toFixed(2)}
-            </p>
+            <p className="text-lg font-medium text-black">Total Price: ${finalPrice.toFixed(2)}</p>
           </div>
         )}
 

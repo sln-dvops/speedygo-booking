@@ -19,6 +19,10 @@ export interface OrderDetails {
   recipientPostalCode: string
   amount?: number
   status?: string
+  isBulkOrder?: boolean
+  totalParcels?: number
+  totalWeight?: number
+  bulkOrderId?: string // For child orders in a bulk order
 }
 
 export type PartialOrderDetails = Partial<OrderDetails>
@@ -45,17 +49,6 @@ export interface HitPayRequestBody {
   allow_repeated_payments: boolean
   send_email: boolean
   send_sms: boolean
-
-  // Removed recipient_address
-
-  // Commented out attributes (not currently used)
-  // wifi_terminal_id?: string
-  // staff_id?: string
-  // business_location_id?: string
-  // expiry_date?: string
-  // expires_after?: string
-  // add_admin_fee?: boolean
-  // generate_qr?: boolean
 }
 
 export interface HitPayResponse {
