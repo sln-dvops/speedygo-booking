@@ -28,6 +28,15 @@ export const createHitPayRequestBody = (amount: number, orderDetails: OrderDetai
       state: "Singapore",
       country: "SG",
     },
+    recipient_address: {
+      line1,
+      line2,
+      postal_code: postalCode,
+      city: "Singapore",
+      state: "Singapore",
+      country: "SG",
+      recipient: orderDetails.recipientName,
+    },
   }
 }
 

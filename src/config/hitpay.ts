@@ -8,7 +8,7 @@ export const createHitPayRequestBody = (amount: number, orderDetails: OrderDetai
     email: orderDetails.senderEmail,
     name: orderDetails.senderName,
     phone: orderDetails.senderContactNumber,
-    reference_number: orderDetails.orderNumber,
+    reference_number: orderDetails.orderNumber || "",
     redirect_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
     webhook: `${process.env.NEXT_PUBLIC_BASE_URL}/api/hitpay/webhook`,
     purpose: "Speedy Xpress Delivery",
@@ -23,16 +23,7 @@ export const createHitPayRequestBody = (amount: number, orderDetails: OrderDetai
       state: "Singapore",
       country: "SG",
     },
-    // Add recipient address details
-    recipient_address: {
-      line1: orderDetails.recipientAddress.split(",")[0] || "",
-      line2: orderDetails.recipientAddress.split(",")[1] || "",
-      postal_code: orderDetails.recipientAddress.split(",").pop()?.trim() || "",
-      city: "Singapore",
-      state: "Singapore",
-      country: "SG",
-      recipient: orderDetails.recipientName,
-    },
+    // Removed recipient_address
   }
 }
 
