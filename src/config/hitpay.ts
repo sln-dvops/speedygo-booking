@@ -1,29 +1,35 @@
 import type { OrderDetails, HitPayRequestBody } from "@/types/order"
 
-export const createHitPayRequestBody = (amount: number, orderDetails: OrderDetails): HitPayRequestBody => {
+export function createHitPayRequestBody(amount: number, orderDetails: OrderDetails): HitPayRequestBody {
+  // Get the base URL from environment variable or use a default
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+
+  // If a custom redirect URL is provided in orderDetails, use that
+  // Otherwise, construct the default one
+  const redirectUrl = orderDetails.redirectUrl || `${baseUrl}/api/payment/success`
+
   return {
-    amount,
+    amount: amount,
     currency: "SGD",
-    payment_methods: ["paynow_online"], // Add other payment methods as needed
+    payment_methods: ["paynow_online", "card"],
     email: orderDetails.senderEmail,
     name: orderDetails.senderName,
     phone: orderDetails.senderContactNumber,
     reference_number: orderDetails.orderNumber || "",
-    redirect_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
-    webhook: `${process.env.NEXT_PUBLIC_BASE_URL}/api/hitpay/webhook`,
-    purpose: "Speedy Xpress Delivery",
-    send_email: true,
-    send_sms: false,
-    allow_repeated_payments: false,
+    redirect_url: redirectUrl,
+    webhook: `${baseUrl}/api/hitpay/webhook`,
+    purpose: `Speedy Xpress Delivery - Order ${orderDetails.orderNumber}`,
     address: {
-      line1: orderDetails.senderAddress.split(",")[0] || "",
-      line2: orderDetails.senderAddress.split(",")[1] || "",
-      postal_code: orderDetails.senderAddress.split(",").pop()?.trim() || "",
+      line1: orderDetails.recipientLine1 || "",
+      line2: orderDetails.recipientLine2 || "",
+      postal_code: orderDetails.recipientPostalCode || "",
       city: "Singapore",
-      state: "Singapore",
+      state: "Singapore", // Set state to "Singapore" instead of empty string
       country: "SG",
     },
-    // Removed recipient_address
+    allow_repeated_payments: false,
+    send_email: true,
+    send_sms: false,
   }
 }
 

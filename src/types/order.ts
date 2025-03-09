@@ -23,6 +23,7 @@ export interface OrderDetails {
   totalParcels?: number
   totalWeight?: number
   bulkOrderId?: string // For child orders in a bulk order
+  redirectUrl?: string // Added for custom redirect URL
 }
 
 export type PartialOrderDetails = Partial<OrderDetails>
@@ -73,5 +74,14 @@ export interface HitPayResponse {
   expiry_date: string | null
   created_at: string
   updated_at: string
+}
+
+export interface OrderWithParcels extends OrderDetails {
+  parcels: ParcelDimensions[]
+  bulkOrder?: {
+    id: string
+    totalParcels: number
+    totalWeight: number
+  }
 }
 

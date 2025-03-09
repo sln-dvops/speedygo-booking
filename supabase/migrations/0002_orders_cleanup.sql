@@ -12,7 +12,7 @@ BEGIN
   FROM public.orders 
   WHERE 
     status != 'paid' AND 
-    created_at < NOW() - INTERVAL '1 minute'; -- For testing (change to '24 hours' in production)
+    created_at < NOW() - INTERVAL '24 hours'; -- For testing (change to '24 hours' in production)
   
   -- If no orders to delete, exit early
   IF order_ids IS NULL OR array_length(order_ids, 1) IS NULL THEN
@@ -67,5 +67,5 @@ $$ LANGUAGE plpgsql;
 -- Enable the pg_cron extension if not already enabled
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
--- Schedule the cleanup function to run every minute
-SELECT cron.schedule('cleanup_unpaid_orders_job', '* * * * *', 'SELECT cleanup_unpaid_orders()');
+-- Schedule the cleanup function to run every 12 hours
+SELECT cron.schedule('cleanup_unpaid_orders_job', '0 */12 * * *', 'SELECT cleanup_unpaid_orders()');

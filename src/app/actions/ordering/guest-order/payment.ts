@@ -5,8 +5,8 @@ import { createHitPayRequestBody } from "@/config/hitpay"
 import type { OrderDetails } from "@/types/order"
 import type { ParcelDimensions } from "@/types/pricing"
 
-// Create a Supabase client with the anon key for client-side and non-admin server-side operations
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
+// Create a Supabase client with the service role key for admin operations
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
   auth: { persistSession: false },
 })
 
@@ -110,9 +110,14 @@ export async function initiatePayment({ amount, orderDetails, parcels = [] }: Pa
     }
 
     // Create the request body using the configuration
+    // Update the redirect URL to include the order ID
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+    const redirectUrl = `${baseUrl}/order/${orderId}`
+
     const requestBody = createHitPayRequestBody(amount, {
       ...orderDetails,
       orderNumber: orderId,
+      redirectUrl: redirectUrl, // Override the default redirect URL
     })
 
     console.log("HitPay request body:", JSON.stringify(requestBody, null, 2))
