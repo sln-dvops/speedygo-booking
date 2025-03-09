@@ -5,15 +5,24 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AddressForm, type AddressFormData } from "@/components/ordering/guest-order/AddressForm"
+import { AddressForm } from "@/components/ordering/guest-order/AddressForm"
 import { validateSingaporeAddress } from "@/utils/addressValidation"
 import type { ParcelDimensions } from "@/types/pricing"
+import type { RecipientDetails } from "@/types/order"
+
+// Import the AddressFormData type but extend it for our local use
+import type { AddressFormData as BaseAddressFormData } from "@/components/ordering/guest-order/AddressForm"
+
+// Create an extended type that includes recipients
+interface ExtendedAddressFormData extends BaseAddressFormData {
+  recipients?: RecipientDetails[]
+}
 
 type SendToProps = {
   onPrevStep: () => void
   onNextStep: () => void
-  formData: AddressFormData
-  updateFormData: (data: AddressFormData) => void
+  formData: ExtendedAddressFormData
+  updateFormData: (data: ExtendedAddressFormData) => void
   isBulkOrder?: boolean
   parcels?: ParcelDimensions[] | null
 }
@@ -27,8 +36,21 @@ export function SendTo({
   parcels = null,
 }: SendToProps) {
   const [isFormValid, setIsFormValid] = useState(false)
-  const [recipientAddresses, setRecipientAddresses] = useState<AddressFormData[]>(() => {
-    // Initialize with empty forms for each parcel
+  const [recipientAddresses, setRecipientAddresses] = useState<BaseAddressFormData[]>(() => {
+    // If we already have recipients data from a previous visit to this step,
+    // use that to initialize our form state
+    if (isBulkOrder && formData.recipients && formData.recipients.length > 0 && parcels) {
+      return formData.recipients.map((recipient: RecipientDetails) => ({
+        name: recipient.name,
+        contactNumber: recipient.contactNumber,
+        email: recipient.email,
+        street: recipient.line1,
+        unitNo: recipient.line2 || "",
+        postalCode: recipient.postalCode,
+      }))
+    }
+
+    // Otherwise initialize with empty forms for each parcel
     if (parcels) {
       return parcels.map(() => ({
         name: "",
@@ -72,30 +94,22 @@ export function SendTo({
     setIsFormValid(isValid)
   }
 
-  const handleBulkAddressChange = (index: number, data: AddressFormData) => {
+  const handleBulkAddressChange = (index: number, data: BaseAddressFormData) => {
+    // Update the local state first
     setRecipientAddresses((prevAddresses) => {
       const newAddresses = [...prevAddresses]
       newAddresses[index] = data
       return newAddresses
     })
 
-    // Update the parent component immediately with the updated address
-    const updatedRecipients = recipientAddresses.map((address, idx) => {
-      // If this is the address we're updating, use the new data
-      if (idx === index) {
-        return {
-          name: data.name,
-          contactNumber: data.contactNumber,
-          email: data.email,
-          address: `${data.street}, ${data.unitNo}, ${data.postalCode}, Singapore`,
-          line1: data.street,
-          line2: data.unitNo,
-          postalCode: data.postalCode,
-          parcelIndex: idx,
-        }
-      }
-      // Otherwise use the existing data
-      return {
+    // Use useEffect to handle parent state updates after render
+  }
+
+  // Add this useEffect to handle parent state updates after render
+  useEffect(() => {
+    if (isBulkOrder && recipientAddresses.length > 0) {
+      // Create the recipients array with the updated data
+      const updatedRecipients = recipientAddresses.map((address, idx) => ({
         name: address.name,
         contactNumber: address.contactNumber,
         email: address.email,
@@ -104,15 +118,20 @@ export function SendTo({
         line2: address.unitNo,
         postalCode: address.postalCode,
         parcelIndex: idx,
-      }
-    })
+      }))
 
-    // Update the parent component with all recipient details
-    updateFormData({
-      ...formData,
-      recipients: updatedRecipients,
-    } as any)
-  }
+      // Update the parent component with all recipient details
+      const updatedFormData: ExtendedAddressFormData = {
+        ...formData,
+        recipients: updatedRecipients,
+      }
+
+      // Only update if recipients have actually changed
+      if (JSON.stringify(updatedRecipients) !== JSON.stringify(formData.recipients || [])) {
+        updateFormData(updatedFormData)
+      }
+    }
+  }, [recipientAddresses, isBulkOrder, formData, updateFormData])
 
   const handleValidityChange = (index: number, isValid: boolean) => {
     const tabId = `parcel-${index + 1}`
@@ -143,29 +162,7 @@ export function SendTo({
   }
 
   const handleNext = () => {
-    if (isBulkOrder && parcels) {
-      // For bulk orders, ensure all recipient details are collected
-      const allRecipients = recipientAddresses.map((address, index) => ({
-        name: address.name,
-        contactNumber: address.contactNumber,
-        email: address.email,
-        address: `${address.street}, ${address.unitNo}, ${address.postalCode}, Singapore`,
-        line1: address.street,
-        line2: address.unitNo,
-        postalCode: address.postalCode,
-        parcelIndex: index,
-      }))
-
-      // Log the recipients to verify they're being collected
-      console.log("Collected recipients:", allRecipients)
-
-      // Update parent component with all recipient details
-      updateFormData({
-        ...formData,
-        recipients: allRecipients,
-      } as any)
-    }
-
+    // We don't need to update recipients here anymore since the useEffect handles it
     onNextStep()
   }
 

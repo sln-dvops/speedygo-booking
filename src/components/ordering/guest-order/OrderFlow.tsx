@@ -12,8 +12,13 @@ import { SendTo } from "@/components/ordering/guest-order/SendTo"
 import { Payment } from "@/components/ordering/guest-order/Payment"
 
 import type { ParcelDimensions as ParcelDimensionsType, DeliveryMethod as DeliveryMethodType } from "@/types/pricing"
-import type { OrderDetails, PartialOrderDetails } from "@/types/order"
+import type { OrderDetails, PartialOrderDetails, RecipientDetails } from "@/types/order"
 import type { AddressFormData } from "@/components/ordering/guest-order/AddressForm"
+
+// Create an extended type that includes recipients
+interface ExtendedAddressFormData extends AddressFormData {
+  recipients?: RecipientDetails[]
+}
 
 type OrderType = "individual" | "bulk"
 type Step = 0 | 1 | 2 | 3 | 4 | 5
@@ -48,13 +53,14 @@ export function OrderFlow() {
     unitNo: "",
     postalCode: "",
   })
-  const [recipientFormData, setRecipientFormData] = useState<AddressFormData>({
+  const [recipientFormData, setRecipientFormData] = useState<ExtendedAddressFormData>({
     name: "",
     contactNumber: "",
     email: "",
     street: "",
     unitNo: "",
     postalCode: "",
+    recipients: [],
   })
   const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState<DeliveryMethodType | undefined>(undefined)
 
@@ -65,7 +71,7 @@ export function OrderFlow() {
       currentStep > 0 &&
       (selectedDimensions !== null ||
         Object.values(senderFormData).some((value) => value !== "") ||
-        Object.values(recipientFormData).some((value) => value !== "") ||
+        Object.values(recipientFormData).some((value) => value !== "" && value !== undefined) ||
         Object.values(orderDetails).some((value) => value !== "" && value !== null) ||
         selectedDeliveryMethod !== undefined)
 
@@ -118,11 +124,11 @@ export function OrderFlow() {
     }))
   }
 
-  const updateRecipientFormData = (data: AddressFormData) => {
-    setSenderFormData(data)
+  const updateRecipientFormData = (data: ExtendedAddressFormData) => {
+    setRecipientFormData(data)
 
     // Check if data contains recipients array (for bulk orders)
-    if ("recipients" in data) {
+    if (data.recipients && data.recipients.length > 0) {
       setOrderDetails((prevDetails) => ({
         ...prevDetails,
         recipients: data.recipients,
