@@ -149,7 +149,7 @@ export async function createOrder(
 
     // Create HitPay payment request
     // Update the redirect URL to include the order ID
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://speedyxpress.vercel.app/"
     const redirectUrl = `${baseUrl}/order/${orderId}`
 
     const hitPayRequestBody = createHitPayRequestBody({

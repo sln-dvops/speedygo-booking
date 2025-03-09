@@ -9,7 +9,7 @@ export const HITPAY_SUCCESS_PATH = "/api/payment/success"
 
 export function createHitPayRequestBody(orderDetails: any) {
   // Get the base URL from environment variable
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://speedyxpress.vercel.app/"
 
   console.log("Using HitPay API endpoint:", HITPAY_API_ENDPOINT)
 
