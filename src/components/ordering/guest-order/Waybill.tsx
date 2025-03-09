@@ -15,6 +15,14 @@ interface WaybillProps {
   orderDetails: OrderWithParcels
 }
 
+interface WaybillContentProps {
+  orderDetails: OrderWithParcels
+  parcel: ParcelDimensions
+  recipient: RecipientDetails | null | undefined
+  waybillIndex?: number
+}
+
+// Update the main Waybill component to include print styles for the new dimensions
 export function Waybill({ orderDetails }: WaybillProps) {
   const [currentWaybillIndex, setCurrentWaybillIndex] = useState(0)
   const singleWaybillRef = useRef<HTMLDivElement>(null)
@@ -23,12 +31,13 @@ export function Waybill({ orderDetails }: WaybillProps) {
   const isBulkOrder = orderDetails.isBulkOrder && orderDetails.parcels.length > 1
   const totalWaybills = isBulkOrder ? orderDetails.parcels.length : 1
 
-  // Handle printing a single waybill - using contentRef as requested
+  // Handle printing a single waybill with updated dimensions
   const handlePrintSingle = useReactToPrint({
     documentTitle: `Waybill-${orderDetails.orderNumber || ""}${isBulkOrder ? `-${currentWaybillIndex + 1}` : ""}`,
     contentRef: singleWaybillRef,
     pageStyle: `
     @page {
+      size: 100mm 150mm;
       margin: 0;
     }
     @media print {
@@ -36,7 +45,11 @@ export function Waybill({ orderDetails }: WaybillProps) {
         margin: 0;
         padding: 0;
       }
-      .page-break-after {
+      .waybill-content {
+        width: 100mm;
+        height: 150mm;
+        padding: 5mm;
+        box-sizing: border-box;
         page-break-after: always;
       }
       button, .tabs, .tab-list, .print-hidden {
@@ -46,12 +59,13 @@ export function Waybill({ orderDetails }: WaybillProps) {
   `,
   })
 
-  // Handle printing all waybills - using contentRef as requested
+  // Handle printing all waybills with updated dimensions
   const handlePrintAll = useReactToPrint({
     documentTitle: `Waybills-${orderDetails.orderNumber || ""}`,
     contentRef: allWaybillsRef,
     pageStyle: `
     @page {
+      size: 100mm 150mm;
       margin: 0;
     }
     @media print {
@@ -59,7 +73,11 @@ export function Waybill({ orderDetails }: WaybillProps) {
         margin: 0;
         padding: 0;
       }
-      .page-break-after {
+      .waybill-content {
+        width: 100mm;
+        height: 150mm;
+        padding: 5mm;
+        box-sizing: border-box;
         page-break-after: always;
       }
       button, .tabs, .tab-list, .print-hidden {
@@ -145,13 +163,18 @@ export function Waybill({ orderDetails }: WaybillProps) {
           )}
 
           {/* Current waybill preview */}
-          <div className="border border-gray-300 rounded-lg p-6 bg-white" ref={singleWaybillRef}>
-            <WaybillContent
-              orderDetails={orderDetails}
-              parcel={currentParcel}
-              recipient={currentRecipient}
-              waybillIndex={currentWaybillIndex}
-            />
+          <div className="border border-gray-300 rounded-lg p-0 bg-white flex justify-center" ref={singleWaybillRef}>
+            <div
+              className="waybill-preview"
+              style={{ width: "100mm", height: "150mm", padding: "5mm", border: "1px dashed #ccc" }}
+            >
+              <WaybillContent
+                orderDetails={orderDetails}
+                parcel={currentParcel}
+                recipient={currentRecipient}
+                waybillIndex={currentWaybillIndex}
+              />
+            </div>
           </div>
 
           {/* Hidden container with all waybills for bulk printing */}
@@ -159,7 +182,7 @@ export function Waybill({ orderDetails }: WaybillProps) {
             <div ref={allWaybillsRef}>
               {isBulkOrder ? (
                 orderDetails.parcels.map((parcel, index) => (
-                  <div key={index} className="mb-8 page-break-after">
+                  <div key={index} className="waybill-content page-break-after">
                     <WaybillContent
                       orderDetails={orderDetails}
                       parcel={parcel}
@@ -169,7 +192,9 @@ export function Waybill({ orderDetails }: WaybillProps) {
                   </div>
                 ))
               ) : (
-                <WaybillContent orderDetails={orderDetails} parcel={orderDetails.parcels[0]} waybillIndex={0} />
+                <div className="waybill-content">
+                  <WaybillContent orderDetails={orderDetails} parcel={orderDetails.parcels[0]} waybillIndex={0} />
+                </div>
               )}
             </div>
           </div>
@@ -180,7 +205,8 @@ export function Waybill({ orderDetails }: WaybillProps) {
             <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
               <li>Click the &quot;Print {isBulkOrder ? "All Waybills" : "Waybill"}&quot; button above</li>
               <li>Each waybill will print on a separate page</li>
-              <li>Ensure your printer settings are set to A4 size</li>
+              <li>Waybills are sized at 100mm × 150mm (portrait)</li>
+              <li>For best results, use label paper or cut to size after printing</li>
               <li>Attach each printed waybill to its corresponding parcel</li>
             </ul>
           </div>
@@ -195,13 +221,7 @@ export function Waybill({ orderDetails }: WaybillProps) {
   )
 }
 
-interface WaybillContentProps {
-  orderDetails: OrderWithParcels
-  parcel: ParcelDimensions
-  recipient?: RecipientDetails | null
-  waybillIndex?: number
-}
-
+// Update the WaybillContent component to be portrait-oriented and fit 150mm x 100mm
 function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: WaybillContentProps) {
   const isBulkOrder = orderDetails.isBulkOrder && orderDetails.parcels.length > 1
 
@@ -219,72 +239,66 @@ function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: W
     : orderDetails.orderNumber || "TEMP-ORDER"
 
   return (
-    <div className="space-y-6 text-black">
-      <div className="flex justify-between items-start">
+    <div className="waybill-content space-y-3 text-black text-sm" style={{ width: "100mm", height: "150mm" }}>
+      {/* Header with logo and waybill info */}
+      <div className="flex justify-between items-start border-b border-black pb-2">
         <div>
-          <h2 className="text-2xl font-bold">Speedy Xpress</h2>
-          <p className="text-sm">Fast & Reliable Delivery</p>
+          <h2 className="text-base font-bold">Speedy Xpress</h2>
+          <p className="text-xs">Fast & Reliable Delivery</p>
         </div>
         <div className="text-right">
-          <p className="font-bold">Waybill</p>
-          <p className="text-sm">{new Date().toLocaleDateString()}</p>
+          <p className="font-bold text-xs">Waybill #{trackingNumber}</p>
+          <p className="text-xs">{new Date().toLocaleDateString()}</p>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between gap-6">
-        <div className="flex-1">
-          <h3 className="font-bold border-b border-black pb-1 mb-2">From</h3>
-          <p className="font-medium">{orderDetails.senderName}</p>
-          <p className="text-sm">{orderDetails.senderAddress}</p>
-          <p className="text-sm">Contact: {orderDetails.senderContactNumber}</p>
-          <p className="text-sm">Email: {orderDetails.senderEmail}</p>
-        </div>
-
-        <div className="flex-1">
-          <h3 className="font-bold border-b border-black pb-1 mb-2">To</h3>
-          <p className="font-medium">{recipientName}</p>
-          <p className="text-sm">{recipientAddress}</p>
-          <p className="text-sm">Contact: {recipientContact}</p>
-          <p className="text-sm">Email: {recipientEmail}</p>
-        </div>
+      {/* From section */}
+      <div className="pt-1">
+        <h3 className="font-bold text-xs border-b border-gray-300 pb-1 mb-1">FROM:</h3>
+        <p className="font-medium text-xs">{orderDetails.senderName}</p>
+        <p className="text-xs">{orderDetails.senderAddress}</p>
+        <p className="text-xs">Contact: {orderDetails.senderContactNumber}</p>
       </div>
 
-      <div className="border-t border-b border-black py-4">
-        <h3 className="font-bold mb-2">Parcel Details</h3>
-        <div className="grid grid-cols-2 gap-4">
+      {/* To section */}
+      <div className="pt-1">
+        <h3 className="font-bold text-xs border-b border-gray-300 pb-1 mb-1">TO:</h3>
+        <p className="font-medium text-xs">{recipientName}</p>
+        <p className="text-xs">{recipientAddress}</p>
+        <p className="text-xs">Contact: {recipientContact}</p>
+      </div>
+
+      {/* Parcel details */}
+      <div className="border-t border-b border-gray-300 py-2">
+        <h3 className="font-bold text-xs mb-1">PARCEL DETAILS:</h3>
+        <div className="grid grid-cols-2 gap-2">
           <div>
-            <p className="text-sm">
+            <p className="text-xs">
               <span className="font-medium">Weight:</span> {parcel.weight} kg
             </p>
-            <p className="text-sm">
-              <span className="font-medium">Dimensions:</span> {parcel.length} × {parcel.width} × {parcel.height} cm
+            <p className="text-xs">
+              <span className="font-medium">Dimensions:</span> {parcel.length}×{parcel.width}×{parcel.height} cm
             </p>
-            <p className="text-sm">
-              <span className="font-medium">Delivery Method:</span>{" "}
-              {orderDetails.deliveryMethod === "atl" ? "At the Location" : "Hand-to-Hand"}
+            <p className="text-xs">
+              <span className="font-medium">Delivery:</span>{" "}
+              {orderDetails.deliveryMethod === "atl" ? "At Location" : "Hand-to-Hand"}
             </p>
             {isBulkOrder && (
-              <p className="text-sm">
+              <p className="text-xs">
                 <span className="font-medium">Parcel:</span> {waybillIndex + 1} of {orderDetails.parcels.length}
               </p>
             )}
           </div>
 
-          <div className="flex flex-col items-end justify-center">
-            <div className="flex flex-col items-center">
-              <QRCode value={trackingNumber} size={100} />
-            </div>
+          <div className="flex justify-end">
+            <QRCode value={trackingNumber} size={50} />
           </div>
         </div>
       </div>
 
-      <div className="flex justify-center">
-        <Barcode value={trackingNumber} width={1.5} height={50} fontSize={14} />
-      </div>
-
-      <div className="text-center text-sm text-gray-500">
-        <p>Thank you for choosing Speedy Xpress!</p>
-        <p>For tracking and support, visit speedyxpress.com or call 1800-SPEEDY</p>
+      {/* Barcode */}
+      <div className="flex justify-center py-2">
+        <Barcode value={trackingNumber} width={1} height={30} fontSize={10} margin={0} />
       </div>
     </div>
   )

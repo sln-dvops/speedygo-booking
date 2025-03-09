@@ -158,4 +158,20 @@
   .bg-white {
     background-color: white !important;
   }
+
+  /* Specific waybill sizing */
+  .waybill-content {
+    width: 100mm;
+    height: 150mm;
+    padding: 5mm;
+    box-sizing: border-box;
+    page-break-after: always;
+    font-size: 10pt;
+  }
+
+  /* Ensure no margins or padding on body */
+  body {
+    margin: 0;
+    padding: 0;
+  }
 }
