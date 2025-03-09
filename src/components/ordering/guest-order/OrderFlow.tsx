@@ -38,6 +38,7 @@ export function OrderFlow() {
     parcelSize: "",
     deliveryMethod: undefined,
     isBulkOrder: false,
+    recipients: [], // Add this line to initialize recipients array
   })
   const [senderFormData, setSenderFormData] = useState<AddressFormData>({
     name: "",
@@ -118,17 +119,27 @@ export function OrderFlow() {
   }
 
   const updateRecipientFormData = (data: AddressFormData) => {
-    setRecipientFormData(data)
-    setOrderDetails((prevDetails) => ({
-      ...prevDetails,
-      recipientName: data.name,
-      recipientAddress: `${data.street}, ${data.unitNo}, ${data.postalCode}, Singapore`,
-      recipientContactNumber: data.contactNumber,
-      recipientEmail: data.email,
-      recipientLine1: data.street,
-      recipientLine2: data.unitNo,
-      recipientPostalCode: data.postalCode,
-    }))
+    setSenderFormData(data)
+
+    // Check if data contains recipients array (for bulk orders)
+    if ("recipients" in data) {
+      setOrderDetails((prevDetails) => ({
+        ...prevDetails,
+        recipients: data.recipients,
+      }))
+    } else {
+      // For individual orders, update as before
+      setOrderDetails((prevDetails) => ({
+        ...prevDetails,
+        recipientName: data.name,
+        recipientAddress: `${data.street}, ${data.unitNo}, ${data.postalCode}, Singapore`,
+        recipientContactNumber: data.contactNumber,
+        recipientEmail: data.email,
+        recipientLine1: data.street,
+        recipientLine2: data.unitNo,
+        recipientPostalCode: data.postalCode,
+      }))
+    }
   }
 
   const clearUnsavedChanges = () => {

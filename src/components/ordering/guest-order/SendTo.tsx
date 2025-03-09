@@ -27,18 +27,20 @@ export function SendTo({
   parcels = null,
 }: SendToProps) {
   const [isFormValid, setIsFormValid] = useState(false)
-  const [recipientAddresses, setRecipientAddresses] = useState<AddressFormData[]>(
-    parcels
-      ? parcels.map(() => ({
-          name: "",
-          contactNumber: "",
-          email: "",
-          street: "",
-          unitNo: "",
-          postalCode: "",
-        }))
-      : [],
-  )
+  const [recipientAddresses, setRecipientAddresses] = useState<AddressFormData[]>(() => {
+    // Initialize with empty forms for each parcel
+    if (parcels) {
+      return parcels.map(() => ({
+        name: "",
+        contactNumber: "",
+        email: "",
+        street: "",
+        unitNo: "",
+        postalCode: "",
+      }))
+    }
+    return []
+  })
   const [activeTab, setActiveTab] = useState("parcel-1")
   const [validTabs, setValidTabs] = useState<string[]>([])
 
@@ -76,6 +78,40 @@ export function SendTo({
       newAddresses[index] = data
       return newAddresses
     })
+
+    // Update the parent component immediately with the updated address
+    const updatedRecipients = recipientAddresses.map((address, idx) => {
+      // If this is the address we're updating, use the new data
+      if (idx === index) {
+        return {
+          name: data.name,
+          contactNumber: data.contactNumber,
+          email: data.email,
+          address: `${data.street}, ${data.unitNo}, ${data.postalCode}, Singapore`,
+          line1: data.street,
+          line2: data.unitNo,
+          postalCode: data.postalCode,
+          parcelIndex: idx,
+        }
+      }
+      // Otherwise use the existing data
+      return {
+        name: address.name,
+        contactNumber: address.contactNumber,
+        email: address.email,
+        address: `${address.street}, ${address.unitNo}, ${address.postalCode}, Singapore`,
+        line1: address.street,
+        line2: address.unitNo,
+        postalCode: address.postalCode,
+        parcelIndex: idx,
+      }
+    })
+
+    // Update the parent component with all recipient details
+    updateFormData({
+      ...formData,
+      recipients: updatedRecipients,
+    } as any)
   }
 
   const handleValidityChange = (index: number, isValid: boolean) => {
@@ -90,6 +126,47 @@ export function SendTo({
       }
       return prevTabs
     })
+  }
+
+  const handleNextParcel = () => {
+    const currentIndex = Number.parseInt(activeTab.split("-")[1]) - 1
+    if (currentIndex < (parcels?.length || 0) - 1) {
+      setActiveTab(`parcel-${currentIndex + 2}`)
+    }
+  }
+
+  const handlePrevParcel = () => {
+    const currentIndex = Number.parseInt(activeTab.split("-")[1]) - 1
+    if (currentIndex > 0) {
+      setActiveTab(`parcel-${currentIndex}`)
+    }
+  }
+
+  const handleNext = () => {
+    if (isBulkOrder && parcels) {
+      // For bulk orders, ensure all recipient details are collected
+      const allRecipients = recipientAddresses.map((address, index) => ({
+        name: address.name,
+        contactNumber: address.contactNumber,
+        email: address.email,
+        address: `${address.street}, ${address.unitNo}, ${address.postalCode}, Singapore`,
+        line1: address.street,
+        line2: address.unitNo,
+        postalCode: address.postalCode,
+        parcelIndex: index,
+      }))
+
+      // Log the recipients to verify they're being collected
+      console.log("Collected recipients:", allRecipients)
+
+      // Update parent component with all recipient details
+      updateFormData({
+        ...formData,
+        recipients: allRecipients,
+      } as any)
+    }
+
+    onNextStep()
   }
 
   const allFormsValid = isBulkOrder ? parcels && validTabs.length === parcels.length : isFormValid
@@ -152,16 +229,7 @@ export function SendTo({
                   </div>
 
                   <AddressForm
-                    initialData={
-                      recipientAddresses[index] || {
-                        name: "",
-                        contactNumber: "",
-                        email: "",
-                        street: "",
-                        unitNo: "",
-                        postalCode: "",
-                      }
-                    }
+                    initialData={recipientAddresses[index]}
                     onDataChange={(data) => handleBulkAddressChange(index, data)}
                     onValidityChange={(isValid: boolean) => handleValidityChange(index, isValid)}
                     title="Recipient Information"
@@ -173,12 +241,7 @@ export function SendTo({
             <div className="flex justify-between mt-4">
               <Button
                 variant="outline"
-                onClick={() => {
-                  const currentIndex = Number.parseInt(activeTab.split("-")[1]) - 1
-                  if (currentIndex > 0) {
-                    setActiveTab(`parcel-${currentIndex}`)
-                  }
-                }}
+                onClick={handlePrevParcel}
                 disabled={activeTab === "parcel-1"}
                 className="border-black text-black hover:bg-yellow-100"
               >
@@ -186,12 +249,7 @@ export function SendTo({
               </Button>
 
               <Button
-                onClick={() => {
-                  const currentIndex = Number.parseInt(activeTab.split("-")[1]) - 1
-                  if (currentIndex < parcels.length - 1) {
-                    setActiveTab(`parcel-${currentIndex + 2}`)
-                  }
-                }}
+                onClick={handleNextParcel}
                 disabled={activeTab === `parcel-${parcels.length}`}
                 className="bg-black hover:bg-black/90 text-yellow-400"
               >
@@ -227,7 +285,7 @@ export function SendTo({
         <Button variant="outline" onClick={onPrevStep} className="border-black text-black hover:bg-yellow-100">
           Back
         </Button>
-        <Button onClick={onNextStep} className="bg-black hover:bg-black/90 text-yellow-400" disabled={!allFormsValid}>
+        <Button onClick={handleNext} className="bg-black hover:bg-black/90 text-yellow-400" disabled={!allFormsValid}>
           Next
         </Button>
       </CardFooter>

@@ -1,17 +1,14 @@
 "use server"
 
-import { createClient } from "@supabase/supabase-js"
-import type { OrderWithParcels } from "@/types/order"
+import { createClient } from "@/utils/supabase/server"
+import type { OrderWithParcels, RecipientDetails } from "@/types/order"
 import type { ParcelDimensions } from "@/types/pricing"
-
-// Create a Supabase client with the service role key for admin operations
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-  auth: { persistSession: false },
-})
 
 export async function getOrderDetails(orderId: string): Promise<OrderWithParcels | null> {
   try {
-    // Fetch the order details
+    const supabase = await createClient()
+
+    // Get the order details
     const { data: order, error: orderError } = await supabase.from("orders").select("*").eq("id", orderId).single()
 
     if (orderError) {
@@ -19,12 +16,7 @@ export async function getOrderDetails(orderId: string): Promise<OrderWithParcels
       return null
     }
 
-    if (!order) {
-      console.error("Order not found")
-      return null
-    }
-
-    // Fetch the parcels for this order
+    // Get the parcels for this order
     const { data: parcels, error: parcelsError } = await supabase.from("parcels").select("*").eq("order_id", orderId)
 
     if (parcelsError) {
@@ -41,39 +33,53 @@ export async function getOrderDetails(orderId: string): Promise<OrderWithParcels
 
     if (bulkOrderError) {
       console.error("Error fetching bulk order:", bulkOrderError)
-      // Continue without bulk order data
     }
 
-    // Map the database fields to our application model
+    // Format the parcels data
+    const formattedParcels: ParcelDimensions[] = parcels.map((parcel) => ({
+      weight: parcel.weight,
+      length: parcel.length,
+      width: parcel.width,
+      height: parcel.height,
+    }))
+
+    // Format recipient details for bulk orders
+    const recipients: RecipientDetails[] = parcels.map((parcel, index) => ({
+      name: parcel.recipient_name,
+      address: parcel.recipient_address,
+      contactNumber: parcel.recipient_contact_number,
+      email: parcel.recipient_email,
+      line1: parcel.recipient_line1,
+      line2: parcel.recipient_line2 || undefined,
+      postalCode: parcel.recipient_postal_code,
+      parcelIndex: index,
+    }))
+
+    // Construct the response - use the first parcel's recipient details for individual orders
     const orderWithParcels: OrderWithParcels = {
       orderNumber: order.id,
       senderName: order.sender_name,
       senderAddress: order.sender_address,
       senderContactNumber: order.sender_contact_number,
       senderEmail: order.sender_email,
-      recipientName: order.recipient_name,
-      recipientAddress: order.recipient_address,
-      recipientContactNumber: order.recipient_contact_number,
-      recipientEmail: order.recipient_email,
-      recipientLine1: order.recipient_line1,
-      recipientLine2: order.recipient_line2,
-      recipientPostalCode: order.recipient_postal_code,
-      parcelSize: order.parcel_size || "",
+      // For individual orders, use the first parcel's recipient details
+      recipientName: parcels[0].recipient_name,
+      recipientAddress: parcels[0].recipient_address,
+      recipientContactNumber: parcels[0].recipient_contact_number,
+      recipientEmail: parcels[0].recipient_email,
+      recipientLine1: parcels[0].recipient_line1,
+      recipientLine2: parcels[0].recipient_line2 || undefined,
+      recipientPostalCode: parcels[0].recipient_postal_code,
+      parcelSize: parcels[0].parcel_size, // Add the missing parcelSize property
       deliveryMethod: order.delivery_method,
       amount: order.amount,
       status: order.status,
-      isBulkOrder: !!bulkOrder,
-      parcels: parcels.map(
-        (parcel): ParcelDimensions => ({
-          weight: parcel.weight,
-          length: parcel.length,
-          width: parcel.width,
-          height: parcel.height,
-        }),
-      ),
+      isBulkOrder: order.is_bulk_order,
+      parcels: formattedParcels,
+      recipients: order.is_bulk_order ? recipients : undefined,
     }
 
-    // Add bulk order details if available
+    // Add bulk order details if applicable
     if (bulkOrder) {
       orderWithParcels.bulkOrder = {
         id: bulkOrder.id,
@@ -86,7 +92,7 @@ export async function getOrderDetails(orderId: string): Promise<OrderWithParcels
 
     return orderWithParcels
   } catch (error) {
-    console.error("Error in getOrderDetails:", error)
+    console.error("Error getting order details:", error)
     return null
   }
 }

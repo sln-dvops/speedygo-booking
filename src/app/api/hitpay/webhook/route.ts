@@ -1,12 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
-
-// Create a Supabase client
-import { createClient } from "@supabase/supabase-js"
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-  auth: { persistSession: false },
-})
+import { createClient } from "@/utils/supabase/server"
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,6 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update the order status in Supabase
+    const supabase = await createClient()
     const { error } = await supabase.from("orders").update({ status: orderStatus }).eq("id", reference_number)
 
     if (error) {

@@ -1,24 +1,30 @@
-import type { OrderDetails, HitPayRequestBody } from "@/types/order"
+// Determine the API endpoint based on the environment
+export const HITPAY_API_ENDPOINT =
+  process.env.NODE_ENV === "production"
+    ? "https://api.hit-pay.com/v1/payment-requests"
+    : "https://api.sandbox.hit-pay.com/v1/payment-requests"
 
-export function createHitPayRequestBody(amount: number, orderDetails: OrderDetails): HitPayRequestBody {
-  // Get the base URL from environment variable or use a default
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+export const HITPAY_WEBHOOK_PATH = "/api/hitpay/webhook"
+export const HITPAY_SUCCESS_PATH = "/api/payment/success"
 
-  // If a custom redirect URL is provided in orderDetails, use that
-  // Otherwise, construct the default one
-  const redirectUrl = orderDetails.redirectUrl || `${baseUrl}/api/payment/success`
+export function createHitPayRequestBody(orderDetails: any) {
+  // Get the base URL from environment variable
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+
+  console.log("Using HitPay API endpoint:", HITPAY_API_ENDPOINT)
 
   return {
-    amount: amount,
+    amount: orderDetails.amount,
     currency: "SGD",
     payment_methods: ["paynow_online", "card"],
     email: orderDetails.senderEmail,
     name: orderDetails.senderName,
     phone: orderDetails.senderContactNumber,
-    reference_number: orderDetails.orderNumber || "",
-    redirect_url: redirectUrl,
-    webhook: `${baseUrl}/api/hitpay/webhook`,
+    reference_number: orderDetails.orderNumber,
+    redirect_url: orderDetails.redirectUrl || `${baseUrl}${HITPAY_SUCCESS_PATH}?orderId=${orderDetails.orderNumber}`,
+    webhook: `${process.env.NEXT_PUBLIC_BASE_URL}/api/hitpay/webhook`,
     purpose: `Speedy Xpress Delivery - Order ${orderDetails.orderNumber}`,
+    // Address removed for privacy reasons
     allow_repeated_payments: false,
     send_email: true,
     send_sms: false,

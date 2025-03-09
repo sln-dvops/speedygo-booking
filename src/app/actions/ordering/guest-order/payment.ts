@@ -1,8 +1,8 @@
 "use server"
 
 import { createClient } from "@supabase/supabase-js"
-import { createHitPayRequestBody } from "@/config/hitpay"
-import type { OrderDetails } from "@/types/order"
+import { createHitPayRequestBody, HITPAY_API_ENDPOINT } from "@/config/hitpay"
+import type { OrderDetails, HitPayResponse, RecipientDetails } from "@/types/order"
 import type { ParcelDimensions } from "@/types/pricing"
 
 // Create a Supabase client with the service role key for admin operations
@@ -10,25 +10,29 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
   auth: { persistSession: false },
 })
 
-type PaymentInitiationDetails = {
-  amount: number
-  orderDetails: OrderDetails
-  parcels?: ParcelDimensions[]
-}
-
-export async function initiatePayment({ amount, orderDetails, parcels = [] }: PaymentInitiationDetails) {
+// Update the createOrder function to handle recipients properly
+export async function createOrder(
+  orderDetails: OrderDetails,
+  parcels: ParcelDimensions[],
+  recipients?: RecipientDetails[],
+) {
   try {
-    console.log("Initiating payment with the following details:")
-    console.log("Amount:", amount)
+    console.log("Creating order with the following details:")
     console.log("Order Details:", JSON.stringify(orderDetails, null, 2))
     console.log("Parcels:", JSON.stringify(parcels, null, 2))
+    console.log("Recipients:", JSON.stringify(recipients, null, 2))
+
+    // For bulk orders, validate that we have recipient details for each parcel
+    if (orderDetails.isBulkOrder && (!recipients || recipients.length !== parcels.length)) {
+      throw new Error("Missing recipient details for bulk order")
+    }
 
     // Validate required fields
-    if (!orderDetails.senderEmail || !orderDetails.senderName) {
+    if (!orderDetails.senderName || !orderDetails.senderEmail || !orderDetails.deliveryMethod) {
       throw new Error("Missing required order details")
     }
 
-    // Insert the main order record
+    // 1. Create the main order record
     const { data: orderData, error: orderError } = await supabase
       .from("orders")
       .insert({
@@ -36,35 +40,25 @@ export async function initiatePayment({ amount, orderDetails, parcels = [] }: Pa
         sender_address: orderDetails.senderAddress,
         sender_contact_number: orderDetails.senderContactNumber,
         sender_email: orderDetails.senderEmail,
-        recipient_name: orderDetails.recipientName,
-        recipient_address: orderDetails.recipientAddress,
-        recipient_contact_number: orderDetails.recipientContactNumber,
-        recipient_email: orderDetails.recipientEmail,
-        recipient_line1: orderDetails.recipientLine1,
-        recipient_line2: orderDetails.recipientLine2,
-        recipient_postal_code: orderDetails.recipientPostalCode,
         delivery_method: orderDetails.deliveryMethod,
-        amount: amount,
+        amount: orderDetails.amount || 0,
         status: "pending",
+        is_bulk_order: orderDetails.isBulkOrder || false,
       })
-      .select()
+      .select("id")
       .single()
 
     if (orderError) {
-      console.error("Error inserting order into Supabase:", orderError)
-      throw new Error(`Failed to store order details: ${orderError.message}`)
-    }
-
-    if (!orderData) {
-      throw new Error("Failed to retrieve inserted order details")
+      console.error("Order creation error:", orderError)
+      throw new Error(`Failed to create order: ${orderError.message}`)
     }
 
     const orderId = orderData.id
     console.log("Generated order ID:", orderId)
 
-    // If this is a bulk order, create a bulk_orders record
+    // 2. If it's a bulk order, create a bulk_orders record
     let bulkOrderId = null
-    if (orderDetails.isBulkOrder && parcels && parcels.length > 1) {
+    if (orderDetails.isBulkOrder && parcels.length > 1) {
       const totalWeight = parcels.reduce((sum, parcel) => sum + parcel.weight, 0)
 
       const { data: bulkOrderData, error: bulkOrderError } = await supabase
@@ -74,12 +68,12 @@ export async function initiatePayment({ amount, orderDetails, parcels = [] }: Pa
           total_parcels: parcels.length,
           total_weight: totalWeight,
         })
-        .select()
+        .select("id")
         .single()
 
       if (bulkOrderError) {
-        console.error("Error inserting bulk order into Supabase:", bulkOrderError)
-        throw new Error(`Failed to store bulk order details: ${bulkOrderError.message}`)
+        console.error("Bulk order creation error:", bulkOrderError)
+        // We'll continue even if this fails - it's not critical
       }
 
       if (bulkOrderData) {
@@ -88,9 +82,42 @@ export async function initiatePayment({ amount, orderDetails, parcels = [] }: Pa
       }
     }
 
-    // Insert parcel records
-    if (parcels && parcels.length > 0) {
-      const parcelRecords = parcels.map((parcel) => ({
+    // 3. Create parcel records with recipient details
+    const parcelInsertPromises = []
+
+    for (let i = 0; i < parcels.length; i++) {
+      const parcel = parcels[i]
+
+      // For bulk orders, get the recipient details for this parcel
+      let recipientName = orderDetails.recipientName
+      let recipientAddress = orderDetails.recipientAddress
+      let recipientContactNumber = orderDetails.recipientContactNumber
+      let recipientEmail = orderDetails.recipientEmail
+      let recipientLine1 = orderDetails.recipientLine1
+      let recipientLine2 = orderDetails.recipientLine2 || ""
+      let recipientPostalCode = orderDetails.recipientPostalCode
+
+      // If this is a bulk order with multiple recipients, use the recipient data for this parcel
+      if (orderDetails.isBulkOrder && recipients && recipients.length > 0) {
+        const recipient = recipients.find((r) => r.parcelIndex === i)
+        if (recipient) {
+          recipientName = recipient.name
+          recipientAddress = recipient.address
+          recipientContactNumber = recipient.contactNumber
+          recipientEmail = recipient.email
+          recipientLine1 = recipient.line1
+          recipientLine2 = recipient.line2 || ""
+          recipientPostalCode = recipient.postalCode
+        }
+      }
+
+      // Validate that we have recipient details
+      if (!recipientName || !recipientAddress || !recipientContactNumber || !recipientEmail) {
+        console.error(`Missing recipient details for parcel ${i + 1}`)
+        throw new Error(`Missing recipient details for parcel ${i + 1}`)
+      }
+
+      const parcelInsert = supabase.from("parcels").insert({
         order_id: orderId,
         bulk_order_id: bulkOrderId,
         parcel_size: `${parcel.weight}kg`,
@@ -98,62 +125,72 @@ export async function initiatePayment({ amount, orderDetails, parcels = [] }: Pa
         length: parcel.length,
         width: parcel.width,
         height: parcel.height,
-      }))
+        recipient_name: recipientName,
+        recipient_address: recipientAddress,
+        recipient_contact_number: recipientContactNumber,
+        recipient_email: recipientEmail,
+        recipient_line1: recipientLine1,
+        recipient_line2: recipientLine2,
+        recipient_postal_code: recipientPostalCode,
+      })
 
-      const { error: parcelsError } = await supabase.from("parcels").insert(parcelRecords)
-
-      if (parcelsError) {
-        console.error("Error inserting parcels into Supabase:", parcelsError)
-        // Continue with payment even if parcel insertion fails
-        // We can handle this later in the webhook
-      }
+      parcelInsertPromises.push(parcelInsert)
     }
 
-    // Create the request body using the configuration
+    // Execute all parcel inserts
+    const parcelResults = await Promise.all(parcelInsertPromises)
+
+    // Check for errors
+    const parcelErrors = parcelResults.filter((result) => result.error)
+    if (parcelErrors.length > 0) {
+      console.error("Errors creating parcels:", parcelErrors)
+      // Continue anyway - we've created the order
+    }
+
+    // Create HitPay payment request
     // Update the redirect URL to include the order ID
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
     const redirectUrl = `${baseUrl}/order/${orderId}`
 
-    const requestBody = createHitPayRequestBody(amount, {
+    const hitPayRequestBody = createHitPayRequestBody({
       ...orderDetails,
       orderNumber: orderId,
       redirectUrl: redirectUrl, // Override the default redirect URL
     })
 
-    console.log("HitPay request body:", JSON.stringify(requestBody, null, 2))
+    console.log("HitPay request body:", JSON.stringify(hitPayRequestBody, null, 2))
+    console.log("Using HitPay API endpoint:", HITPAY_API_ENDPOINT)
 
-    // Determine the API endpoint based on the environment
-    const apiEndpoint =
-      process.env.NODE_ENV === "production"
-        ? "https://api.hit-pay.com/v1/payment-requests"
-        : "https://api.sandbox.hit-pay.com/v1/payment-requests"
-
-    console.log("Using HitPay API endpoint:", apiEndpoint)
-
-    // Initiate payment with HitPay API
-    const response = await fetch(apiEndpoint, {
+    const hitPayResponse = await fetch(HITPAY_API_ENDPOINT, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-BUSINESS-API-KEY": process.env.HITPAY_API_KEY || "",
+        "X-Requested-With": "XMLHttpRequest",
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(hitPayRequestBody),
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
+    if (!hitPayResponse.ok) {
+      const errorText = await hitPayResponse.text()
       console.error("HitPay API error response:", errorText)
-      throw new Error(`Failed to initiate payment: ${response.status} ${response.statusText}
-${errorText}`)
+      throw new Error(`HitPay API error: ${hitPayResponse.status} ${hitPayResponse.statusText}\n${errorText}`)
     }
 
-    const hitpayResponse = await response.json()
-    console.log("HitPay API response:", JSON.stringify(hitpayResponse, null, 2))
+    const hitPayData: HitPayResponse = await hitPayResponse.json()
+    console.log("HitPay API response:", JSON.stringify(hitPayData, null, 2))
 
-    return hitpayResponse.url // Return the HitPay payment URL
+    return {
+      success: true,
+      orderId,
+      paymentUrl: hitPayData.url,
+    }
   } catch (error) {
-    console.error("Payment initiation failed:", error)
-    throw error
+    console.error("Order creation failed:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    }
   }
 }
 

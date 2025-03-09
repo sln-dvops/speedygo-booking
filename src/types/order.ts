@@ -51,6 +51,7 @@ export interface HitPayRequestBody {
   redirect_url: string
   webhook: string
   purpose: string
+  // Address removed for privacy reasons
   allow_repeated_payments: boolean
   send_email: boolean
   send_sms: boolean
@@ -88,5 +89,16 @@ export interface OrderWithParcels extends OrderDetails {
     totalWeight: number
   }
   recipients?: RecipientDetails[] // For bulk orders with multiple recipients
+}
+
+// Update the AddressFormData interface to include recipients
+export interface AddressFormData {
+  name: string
+  contactNumber: string
+  email: string
+  street: string
+  unitNo: string
+  postalCode: string
+  recipients?: RecipientDetails[] // Add this line
 }
 
