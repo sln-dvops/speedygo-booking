@@ -28,22 +28,22 @@ export function Waybill({ orderDetails }: WaybillProps) {
     documentTitle: `Waybill-${orderDetails.orderNumber || ""}${isBulkOrder ? `-${currentWaybillIndex + 1}` : ""}`,
     contentRef: singleWaybillRef,
     pageStyle: `
-      @page {
+    @page {
+      margin: 0;
+    }
+    @media print {
+      body {
         margin: 0;
+        padding: 0;
       }
-      @media print {
-        body {
-          margin: 0;
-          padding: 0;
-        }
-        .page-break-after {
-          page-break-after: always;
-        }
-        button, .tabs, .tab-list, .print-hidden {
-          display: none !important;
-        }
+      .page-break-after {
+        page-break-after: always;
       }
-    `,
+      button, .tabs, .tab-list, .print-hidden {
+        display: none !important;
+      }
+    }
+  `,
   })
 
   // Handle printing all waybills - using contentRef as requested
@@ -51,22 +51,22 @@ export function Waybill({ orderDetails }: WaybillProps) {
     documentTitle: `Waybills-${orderDetails.orderNumber || ""}`,
     contentRef: allWaybillsRef,
     pageStyle: `
-      @page {
+    @page {
+      margin: 0;
+    }
+    @media print {
+      body {
         margin: 0;
+        padding: 0;
       }
-      @media print {
-        body {
-          margin: 0;
-          padding: 0;
-        }
-        .page-break-after {
-          page-break-after: always;
-        }
-        button, .tabs, .tab-list, .print-hidden {
-          display: none !important;
-        }
+      .page-break-after {
+        page-break-after: always;
       }
-    `,
+      button, .tabs, .tab-list, .print-hidden {
+        display: none !important;
+      }
+    }
+  `,
   })
 
   const handlePrevWaybill = () => {
@@ -102,13 +102,13 @@ export function Waybill({ orderDetails }: WaybillProps) {
         <div className="space-y-6">
           {/* Print buttons */}
           <div className="flex justify-end gap-2 print-hidden">
-            <Button onClick={handlePrintSingle} className="bg-black hover:bg-black/90 text-yellow-400">
+            <Button onClick={() => handlePrintSingle()} className="bg-black hover:bg-black/90 text-yellow-400">
               <Printer className="mr-2 h-4 w-4" />
               Print Current Waybill
             </Button>
 
             {isBulkOrder && (
-              <Button onClick={handlePrintAll} className="bg-black hover:bg-black/90 text-yellow-400">
+              <Button onClick={() => handlePrintAll()} className="bg-black hover:bg-black/90 text-yellow-400">
                 <Printer className="mr-2 h-4 w-4" />
                 Print All Waybills
               </Button>
@@ -178,7 +178,7 @@ export function Waybill({ orderDetails }: WaybillProps) {
           <div className="bg-yellow-100 p-4 rounded-lg print-hidden">
             <h3 className="font-medium text-black mb-2">Printing Instructions:</h3>
             <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
-              <li>Click the "Print {isBulkOrder ? "All Waybills" : "Waybill"}" button above</li>
+              <li>Click the &quot;Print {isBulkOrder ? "All Waybills" : "Waybill"}&quot; button above</li>
               <li>Each waybill will print on a separate page</li>
               <li>Ensure your printer settings are set to A4 size</li>
               <li>Attach each printed waybill to its corresponding parcel</li>
