@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges"
 import { UnsavedChangesDialog } from "@/components/UnsavedChangesDialog"
+import { OrderTypeSelection } from "@/components/ordering/guest-order/OrderTypeSelection"
 import { ParcelDimensions } from "@/components/ordering/guest-order/ParcelSize"
 import { DeliveryMethod } from "@/components/ordering/guest-order/DeliveryMethod"
 import { SendFrom } from "@/components/ordering/guest-order/SendFrom"
@@ -14,10 +15,12 @@ import type { ParcelDimensions as ParcelDimensionsType, DeliveryMethod as Delive
 import type { OrderDetails, PartialOrderDetails } from "@/types/order"
 import type { AddressFormData } from "@/components/ordering/guest-order/AddressForm"
 
-type Step = 1 | 2 | 3 | 4 | 5
+type OrderType = "individual" | "bulk"
+type Step = 0 | 1 | 2 | 3 | 4 | 5
 
 export function OrderFlow() {
-  const [currentStep, setCurrentStep] = useState<Step>(1)
+  const [orderType, setOrderType] = useState<OrderType | null>(null)
+  const [currentStep, setCurrentStep] = useState<Step>(0)
   const [selectedDimensions, setSelectedDimensions] = useState<ParcelDimensionsType[] | null>(null)
   const [orderDetails, setOrderDetails] = useState<PartialOrderDetails>({
     orderNumber: "",
@@ -58,7 +61,7 @@ export function OrderFlow() {
 
   useEffect(() => {
     const hasUnsavedChanges =
-      currentStep <= 5 &&
+      currentStep > 0 &&
       (selectedDimensions !== null ||
         Object.values(senderFormData).some((value) => value !== "") ||
         Object.values(recipientFormData).some((value) => value !== "") ||
@@ -76,20 +79,20 @@ export function OrderFlow() {
     selectedDeliveryMethod,
   ])
 
-  // Update isBulkOrder whenever selectedDimensions changes
+  // Update isBulkOrder whenever orderType changes
   useEffect(() => {
-    if (selectedDimensions && selectedDimensions.length > 1) {
+    if (orderType) {
       setOrderDetails((prev) => ({
         ...prev,
-        isBulkOrder: true,
-      }))
-    } else {
-      setOrderDetails((prev) => ({
-        ...prev,
-        isBulkOrder: false,
+        isBulkOrder: orderType === "bulk",
       }))
     }
-  }, [selectedDimensions])
+  }, [orderType])
+
+  const handleOrderTypeSelection = (type: OrderType) => {
+    setOrderType(type)
+    setCurrentStep(1)
+  }
 
   const handleNextStep = () => {
     if (currentStep < 5) {
@@ -98,7 +101,7 @@ export function OrderFlow() {
   }
 
   const handlePrevStep = () => {
-    if (currentStep > 1) {
+    if (currentStep > 0) {
       setCurrentStep((prevStep) => (prevStep - 1) as Step)
     }
   }
@@ -142,7 +145,19 @@ export function OrderFlow() {
             </h1>
 
             <AnimatePresence mode="wait">
-              {currentStep === 1 && (
+              {currentStep === 0 && (
+                <motion.div
+                  key="order-type"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <OrderTypeSelection onNextStep={handleOrderTypeSelection} />
+                </motion.div>
+              )}
+
+              {currentStep === 1 && orderType && (
                 <motion.div
                   key="parcel-size"
                   initial={{ opacity: 0, y: 20 }}
@@ -154,6 +169,7 @@ export function OrderFlow() {
                     onNextStep={handleNextStep}
                     selectedDimensions={selectedDimensions}
                     setSelectedDimensions={setSelectedDimensions}
+                    isBulkOrder={orderType === "bulk"}
                   />
                 </motion.div>
               )}
@@ -170,7 +186,7 @@ export function OrderFlow() {
                     onPrevStep={handlePrevStep}
                     onNextStep={handleNextStep}
                     selectedDimensions={selectedDimensions[0]} // Pass the first parcel for pricing calculation
-                    isBulkOrder={selectedDimensions.length > 1}
+                    isBulkOrder={orderType === "bulk"}
                     totalParcels={selectedDimensions.length}
                     totalWeight={selectedDimensions.reduce((sum, parcel) => sum + parcel.weight, 0)}
                     selectedDeliveryMethod={selectedDeliveryMethod}
@@ -204,12 +220,24 @@ export function OrderFlow() {
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <SendTo
-                    onPrevStep={handlePrevStep}
-                    onNextStep={handleNextStep}
-                    formData={recipientFormData}
-                    updateFormData={updateRecipientFormData}
-                  />
+                  {orderType === "individual" ? (
+                    <SendTo
+                      onPrevStep={handlePrevStep}
+                      onNextStep={handleNextStep}
+                      formData={recipientFormData}
+                      updateFormData={updateRecipientFormData}
+                    />
+                  ) : (
+                    // For bulk orders, we'll handle recipient addresses differently
+                    <SendTo
+                      onPrevStep={handlePrevStep}
+                      onNextStep={handleNextStep}
+                      formData={recipientFormData}
+                      updateFormData={updateRecipientFormData}
+                      isBulkOrder={true}
+                      parcels={selectedDimensions}
+                    />
+                  )}
                 </motion.div>
               )}
 

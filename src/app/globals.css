@@ -127,3 +127,35 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Add page break styling for printing multiple waybills */
+@media print {
+  .page-break-after {
+    page-break-after: always;
+  }
+
+  /* Hide UI elements when printing */
+  button,
+  .tabs,
+  .tab-list,
+  .print-hidden {
+    display: none !important;
+  }
+
+  /* Ensure background colors and images print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Reset any transforms that might affect printing */
+  * {
+    transform: none !important;
+  }
+
+  /* Ensure content is visible */
+  .bg-white {
+    background-color: white !important;
+  }
+}

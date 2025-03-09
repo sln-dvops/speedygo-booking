@@ -16,9 +16,15 @@ type ParcelDimensionsProps = {
   onNextStep: () => void
   selectedDimensions: ParcelDimensions[] | null
   setSelectedDimensions: (dimensions: ParcelDimensions[]) => void
+  isBulkOrder?: boolean
 }
 
-export function ParcelDimensions({ onNextStep, selectedDimensions, setSelectedDimensions }: ParcelDimensionsProps) {
+export function ParcelDimensions({
+  onNextStep,
+  selectedDimensions,
+  setSelectedDimensions,
+  isBulkOrder = false,
+}: ParcelDimensionsProps) {
   const [currentParcel, setCurrentParcel] = useState<ParcelDimensions>({
     weight: 0,
     length: 0,
@@ -120,22 +126,32 @@ export function ParcelDimensions({ onNextStep, selectedDimensions, setSelectedDi
     <Card className="bg-white shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-black">Parcel Details</CardTitle>
+        {isBulkOrder && (
+          <Badge variant="outline" className="bg-yellow-200 text-black border-black mt-2">
+            Bulk Order
+          </Badge>
+        )}
         {parcels.length > 0 && (
           <div className="flex items-center mt-2">
             <Badge variant="outline" className="bg-yellow-100 text-black border-black">
               {parcels.length} {parcels.length === 1 ? "Parcel" : "Parcels"}
             </Badge>
-            {parcels.length > 1 && (
-              <Badge variant="outline" className="ml-2 bg-yellow-200 text-black border-black">
-                Bulk Order
-              </Badge>
-            )}
           </div>
         )}
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* CSV Upload Component */}
-        <CsvUploader setParcels={setParcels} isValidDimensions={isValidDimensions} />
+        {isBulkOrder && (
+          <div className="bg-yellow-100 p-4 rounded-lg mb-4">
+            <h3 className="font-medium text-black mb-2">Bulk Order Information</h3>
+            <p className="text-sm text-gray-600">
+              For bulk orders, you can add multiple parcels here. In the next steps, you&apos;ll be able to specify different
+              recipient addresses for each parcel.
+            </p>
+          </div>
+        )}
+
+        {/* CSV Upload Component - Only show for bulk orders */}
+        {isBulkOrder && <CsvUploader setParcels={setParcels} isValidDimensions={isValidDimensions} />}
 
         {/* Parcel Form Component */}
         <ParcelForm
@@ -160,10 +176,13 @@ export function ParcelDimensions({ onNextStep, selectedDimensions, setSelectedDi
         <Button
           onClick={handleContinue}
           className="w-full bg-black hover:bg-black/90 text-yellow-400"
-          disabled={parcels.length === 0}
+          disabled={parcels.length === 0 || (isBulkOrder && parcels.length < 2)}
         >
-          Continue to Collection Method
+          Continue to Delivery Method
         </Button>
+        {isBulkOrder && parcels.length < 2 && (
+          <p className="text-sm text-red-500 mt-2">Please add at least 2 parcels for a bulk order.</p>
+        )}
       </CardFooter>
     </Card>
   )

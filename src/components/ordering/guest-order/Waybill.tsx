@@ -1,29 +1,34 @@
 "use client"
 
-import { useRef } from "react"
+import { useState, useRef } from "react"
 import { useReactToPrint } from "react-to-print"
-import { format } from "date-fns"
-import { Printer } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Printer, ChevronLeft, ChevronRight } from "lucide-react"
 import QRCode from "react-qr-code"
 import Barcode from "react-barcode"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import type { OrderWithParcels } from "@/types/order"
+import type { OrderWithParcels, RecipientDetails } from "@/types/order"
+import type { ParcelDimensions } from "@/types/pricing"
 
 interface WaybillProps {
   orderDetails: OrderWithParcels
 }
 
 export function Waybill({ orderDetails }: WaybillProps) {
-  const waybillRef = useRef<HTMLDivElement>(null)
+  const [currentWaybillIndex, setCurrentWaybillIndex] = useState(0)
+  const singleWaybillRef = useRef<HTMLDivElement>(null)
+  const allWaybillsRef = useRef<HTMLDivElement>(null)
 
-  // Set up the print handler correctly
-  const handlePrint = useReactToPrint({
-    documentTitle: `Waybill-${orderDetails.orderNumber}`,
-    contentRef: waybillRef,
+  const isBulkOrder = orderDetails.isBulkOrder && orderDetails.parcels.length > 1
+  const totalWaybills = isBulkOrder ? orderDetails.parcels.length : 1
+
+  // Handle printing a single waybill - using contentRef as requested
+  const handlePrintSingle = useReactToPrint({
+    documentTitle: `Waybill-${orderDetails.orderNumber || ""}${isBulkOrder ? `-${currentWaybillIndex + 1}` : ""}`,
+    contentRef: singleWaybillRef,
     pageStyle: `
       @page {
-        size: 150mm 100mm landscape;
         margin: 0;
       }
       @media print {
@@ -31,179 +36,255 @@ export function Waybill({ orderDetails }: WaybillProps) {
           margin: 0;
           padding: 0;
         }
-        .waybill-content {
-          transform: none !important;
-          width: 150mm !important;
-          height: 100mm !important;
+        .page-break-after {
+          page-break-after: always;
+        }
+        button, .tabs, .tab-list, .print-hidden {
+          display: none !important;
         }
       }
     `,
   })
 
-  // Format the date for display
-  const formattedDate = format(new Date(), "dd MMM yyyy")
+  // Handle printing all waybills - using contentRef as requested
+  const handlePrintAll = useReactToPrint({
+    documentTitle: `Waybills-${orderDetails.orderNumber || ""}`,
+    contentRef: allWaybillsRef,
+    pageStyle: `
+      @page {
+        margin: 0;
+      }
+      @media print {
+        body {
+          margin: 0;
+          padding: 0;
+        }
+        .page-break-after {
+          page-break-after: always;
+        }
+        button, .tabs, .tab-list, .print-hidden {
+          display: none !important;
+        }
+      }
+    `,
+  })
+
+  const handlePrevWaybill = () => {
+    setCurrentWaybillIndex((prev) => Math.max(0, prev - 1))
+  }
+
+  const handleNextWaybill = () => {
+    setCurrentWaybillIndex((prev) => Math.min(totalWaybills - 1, prev + 1))
+  }
+
+  // Get current recipient for bulk orders
+  const getCurrentRecipient = (): RecipientDetails | null => {
+    if (!isBulkOrder || !orderDetails.recipients) return null
+    return orderDetails.recipients.find((r) => r.parcelIndex === currentWaybillIndex) || null
+  }
+
+  const currentRecipient = getCurrentRecipient()
+  const currentParcel = orderDetails.parcels[currentWaybillIndex] || orderDetails.parcels[0]
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button className="bg-black hover:bg-black/90 text-yellow-400" onClick={() => handlePrint()}>
-          <Printer className="mr-2 h-4 w-4" />
-          Print Waybill
-        </Button>
-      </div>
+    <Card className="bg-white shadow-lg">
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-2xl font-bold text-black">Waybill</CardTitle>
+          {isBulkOrder && (
+            <Badge variant="outline" className="bg-yellow-200 text-black border-black">
+              Bulk Order ({totalWaybills} Parcels)
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="p-6">
+        <div className="space-y-6">
+          {/* Print buttons */}
+          <div className="flex justify-end gap-2 print-hidden">
+            <Button onClick={handlePrintSingle} className="bg-black hover:bg-black/90 text-yellow-400">
+              <Printer className="mr-2 h-4 w-4" />
+              Print Current Waybill
+            </Button>
 
-      {/* Preview container with proper sizing */}
-      <div className="border border-gray-300 rounded-md p-6 bg-gray-100">
-        <div className="text-sm text-gray-500 mb-4">Waybill Preview (will print at 150mm &times; 100mm):</div>
+            {isBulkOrder && (
+              <Button onClick={handlePrintAll} className="bg-black hover:bg-black/90 text-yellow-400">
+                <Printer className="mr-2 h-4 w-4" />
+                Print All Waybills
+              </Button>
+            )}
+          </div>
 
-        {/* Wrapper to contain the preview */}
-        <div className="flex justify-center">
-          <div className="w-full max-w-3xl">
-            {/* Actual waybill that will be printed */}
-            <div
-              ref={waybillRef}
-              className="bg-white waybill-content border-2 border-black rounded-md p-4 mx-auto"
-              style={{
-                width: "100%",
-                aspectRatio: "1.5 / 1", // 150mm × 100mm aspect ratio
-                maxHeight: "600px",
-                overflow: "visible",
-              }}
-            >
-              {/* Main waybill content */}
-              <div className="flex flex-col h-full">
-                {/* Top section with QR and details */}
-                <div className="flex flex-grow">
-                  {/* Left column - QR code */}
-                  <div className="w-1/4 flex flex-col items-center justify-start border-r border-black pr-2">
-                    {/* Taller QR code container with more height */}
-                    <div
-                      className="border border-black p-3 rounded-md flex flex-col items-center justify-center mb-2 w-full"
-                      style={{ minHeight: "120px" }} // Increased container height
-                    >
-                      {/* Further increased QR code size */}
-                      <QRCode
-                        value={orderDetails.orderNumber || ""}
-                        size={110}
-                        style={{ height: "auto", maxWidth: "100%", width: "110px" }}
-                        viewBox={`0 0 256 256`}
-                      />
-                    </div>
-                    <div className="text-center">
-                      <h2 className="text-base font-bold text-black">SPEEDY XPRESS</h2>
-                      <p className="text-xs text-gray-600">Fast &amp; Reliable Delivery</p>
-                    </div>
-                  </div>
+          {/* Navigation for bulk orders */}
+          {isBulkOrder && (
+            <div className="flex justify-between items-center print-hidden">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrevWaybill}
+                disabled={currentWaybillIndex === 0}
+                className="border-black text-black hover:bg-yellow-100"
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Previous
+              </Button>
+              <span className="font-medium">
+                Waybill {currentWaybillIndex + 1} of {totalWaybills}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextWaybill}
+                disabled={currentWaybillIndex === totalWaybills - 1}
+                className="border-black text-black hover:bg-yellow-100"
+              >
+                Next
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          )}
 
-                  {/* Right column - Main content */}
-                  <div className="w-3/4 pl-2 flex flex-col">
-                    {/* Header */}
-                    <div className="flex justify-between items-center border-b border-black pb-1 mb-1">
-                      <div>
-                        <Badge className="bg-black text-yellow-400 text-xs">
-                          {orderDetails.deliveryMethod === "atl" ? "Authorized to Leave" : "Hand to Hand Delivery"}
-                        </Badge>
+          {/* Current waybill preview */}
+          <div className="border border-gray-300 rounded-lg p-6 bg-white" ref={singleWaybillRef}>
+            <WaybillContent
+              orderDetails={orderDetails}
+              parcel={currentParcel}
+              recipient={currentRecipient}
+              waybillIndex={currentWaybillIndex}
+            />
+          </div>
 
-                        {orderDetails.isBulkOrder && (
-                          <Badge className="ml-1 bg-yellow-400 text-black border border-black text-xs">
-                            Bulk ({orderDetails.totalParcels})
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-600">Date: {formattedDate}</p>
-                        <p className="text-xs text-gray-600">Order #: {orderDetails.orderNumber}</p>
-                      </div>
-                    </div>
-
-                    {/* Sender & Recipient */}
-                    <div className="grid grid-cols-2 gap-2 mb-1">
-                      <div className="border border-black p-1 rounded-md">
-                        <h3 className="font-bold text-black uppercase text-xs">FROM:</h3>
-                        <p className="font-bold text-black text-xs">{orderDetails.senderName}</p>
-                        <p className="text-xs text-gray-600 leading-tight">{orderDetails.senderAddress}</p>
-                        <p className="text-xs text-gray-600 leading-tight">
-                          Contact: {orderDetails.senderContactNumber}
-                        </p>
-                      </div>
-
-                      <div className="border border-black p-1 rounded-md">
-                        <h3 className="font-bold text-black uppercase text-xs">TO:</h3>
-                        <p className="font-bold text-black text-xs">{orderDetails.recipientName}</p>
-                        <p className="text-xs text-gray-600 leading-tight">{orderDetails.recipientAddress}</p>
-                        <p className="text-xs text-gray-600 leading-tight">
-                          Contact: {orderDetails.recipientContactNumber}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Parcel Details */}
-                    <div className="flex-grow">
-                      <h3 className="font-bold text-black uppercase text-xs mb-1">PARCEL DETAILS:</h3>
-
-                      <div className="border border-black rounded-md overflow-hidden">
-                        <table className="w-full text-xs">
-                          <thead className="bg-gray-100">
-                            <tr>
-                              <th className="py-1 px-1 text-left border-b border-black">#</th>
-                              <th className="py-1 px-1 text-left border-b border-black">Weight</th>
-                              <th className="py-1 px-1 text-left border-b border-black">
-                                Dimensions (L&times;W&times;H)
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {orderDetails.parcels.slice(0, 3).map((parcel, index) => (
-                              <tr key={index} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                                <td className="py-0.5 px-1 border-b border-gray-200">{index + 1}</td>
-                                <td className="py-0.5 px-1 border-b border-gray-200">{parcel.weight} kg</td>
-                                <td className="py-0.5 px-1 border-b border-gray-200">
-                                  {parcel.length} &times; {parcel.width} &times; {parcel.height} cm
-                                </td>
-                              </tr>
-                            ))}
-                            {orderDetails.parcels.length > 3 && (
-                              <tr>
-                                <td colSpan={3} className="py-0.5 px-1 text-center">
-                                  + {orderDetails.parcels.length - 3} more parcels
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom section with barcode */}
-                <div className="mt-4 pt-4 border-t border-black">
-                  <div className="flex justify-center">
-                    <Barcode
-                      value={orderDetails.orderNumber || ""}
-                      width={2}
-                      height={40}
-                      fontSize={12}
-                      margin={0}
-                      displayValue={true}
+          {/* Hidden container with all waybills for bulk printing */}
+          <div style={{ display: "none" }}>
+            <div ref={allWaybillsRef}>
+              {isBulkOrder ? (
+                orderDetails.parcels.map((parcel, index) => (
+                  <div key={index} className="mb-8 page-break-after">
+                    <WaybillContent
+                      orderDetails={orderDetails}
+                      parcel={parcel}
+                      recipient={orderDetails.recipients?.find((r) => r.parcelIndex === index)}
+                      waybillIndex={index}
                     />
                   </div>
-                </div>
-              </div>
+                ))
+              ) : (
+                <WaybillContent orderDetails={orderDetails} parcel={orderDetails.parcels[0]} waybillIndex={0} />
+              )}
+            </div>
+          </div>
+
+          {/* Print instructions */}
+          <div className="bg-yellow-100 p-4 rounded-lg print-hidden">
+            <h3 className="font-medium text-black mb-2">Printing Instructions:</h3>
+            <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
+              <li>Click the "Print {isBulkOrder ? "All Waybills" : "Waybill"}" button above</li>
+              <li>Each waybill will print on a separate page</li>
+              <li>Ensure your printer settings are set to A4 size</li>
+              <li>Attach each printed waybill to its corresponding parcel</li>
+            </ul>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="px-6 py-4 print-hidden">
+        <p className="text-sm text-gray-500">
+          Order #{orderDetails.orderNumber || ""} • {new Date().toLocaleDateString()}
+        </p>
+      </CardFooter>
+    </Card>
+  )
+}
+
+interface WaybillContentProps {
+  orderDetails: OrderWithParcels
+  parcel: ParcelDimensions
+  recipient?: RecipientDetails | null
+  waybillIndex?: number
+}
+
+function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: WaybillContentProps) {
+  const isBulkOrder = orderDetails.isBulkOrder && orderDetails.parcels.length > 1
+
+  // For bulk orders, use the recipient details if available
+  const recipientName = recipient ? recipient.name : orderDetails.recipientName
+  const recipientAddress = recipient
+    ? `${recipient.line1}, ${recipient.line2 || ""}, ${recipient.postalCode}, Singapore`
+    : orderDetails.recipientAddress
+  const recipientContact = recipient ? recipient.contactNumber : orderDetails.recipientContactNumber
+  const recipientEmail = recipient ? recipient.email : orderDetails.recipientEmail
+
+  // Generate a unique tracking number for each parcel in a bulk order
+  const trackingNumber = isBulkOrder
+    ? `${orderDetails.orderNumber || ""}-${waybillIndex + 1}`
+    : orderDetails.orderNumber || "TEMP-ORDER"
+
+  return (
+    <div className="space-y-6 text-black">
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-bold">Speedy Xpress</h2>
+          <p className="text-sm">Fast & Reliable Delivery</p>
+        </div>
+        <div className="text-right">
+          <p className="font-bold">Waybill</p>
+          <p className="text-sm">{new Date().toLocaleDateString()}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row justify-between gap-6">
+        <div className="flex-1">
+          <h3 className="font-bold border-b border-black pb-1 mb-2">From</h3>
+          <p className="font-medium">{orderDetails.senderName}</p>
+          <p className="text-sm">{orderDetails.senderAddress}</p>
+          <p className="text-sm">Contact: {orderDetails.senderContactNumber}</p>
+          <p className="text-sm">Email: {orderDetails.senderEmail}</p>
+        </div>
+
+        <div className="flex-1">
+          <h3 className="font-bold border-b border-black pb-1 mb-2">To</h3>
+          <p className="font-medium">{recipientName}</p>
+          <p className="text-sm">{recipientAddress}</p>
+          <p className="text-sm">Contact: {recipientContact}</p>
+          <p className="text-sm">Email: {recipientEmail}</p>
+        </div>
+      </div>
+
+      <div className="border-t border-b border-black py-4">
+        <h3 className="font-bold mb-2">Parcel Details</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm">
+              <span className="font-medium">Weight:</span> {parcel.weight} kg
+            </p>
+            <p className="text-sm">
+              <span className="font-medium">Dimensions:</span> {parcel.length} × {parcel.width} × {parcel.height} cm
+            </p>
+            <p className="text-sm">
+              <span className="font-medium">Delivery Method:</span>{" "}
+              {orderDetails.deliveryMethod === "atl" ? "At the Location" : "Hand-to-Hand"}
+            </p>
+            {isBulkOrder && (
+              <p className="text-sm">
+                <span className="font-medium">Parcel:</span> {waybillIndex + 1} of {orderDetails.parcels.length}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col items-end justify-center">
+            <div className="flex flex-col items-center">
+              <QRCode value={trackingNumber} size={100} />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Additional instructions */}
-      <div className="bg-yellow-100 p-6 rounded-md border border-yellow-300">
-        <h3 className="font-medium text-black mb-4">Printing Instructions:</h3>
-        <ul className="list-disc pl-5 text-sm text-gray-700 space-y-2">
-          <li>Click the &ldquo;Print Waybill&rdquo; button above to print</li>
-          <li>Ensure your printer is set to print at actual size (100%)</li>
-          <li>The waybill will print at exactly 150mm &times; 100mm</li>
-          <li>Use adhesive paper if available for easy attachment to your parcel</li>
-        </ul>
+      <div className="flex justify-center">
+        <Barcode value={trackingNumber} width={1.5} height={50} fontSize={14} />
+      </div>
+
+      <div className="text-center text-sm text-gray-500">
+        <p>Thank you for choosing Speedy Xpress!</p>
+        <p>For tracking and support, visit speedyxpress.com or call 1800-SPEEDY</p>
       </div>
     </div>
   )

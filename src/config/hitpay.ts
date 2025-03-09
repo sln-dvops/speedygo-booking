@@ -19,14 +19,6 @@ export function createHitPayRequestBody(amount: number, orderDetails: OrderDetai
     redirect_url: redirectUrl,
     webhook: `${baseUrl}/api/hitpay/webhook`,
     purpose: `Speedy Xpress Delivery - Order ${orderDetails.orderNumber}`,
-    address: {
-      line1: orderDetails.recipientLine1 || "",
-      line2: orderDetails.recipientLine2 || "",
-      postal_code: orderDetails.recipientPostalCode || "",
-      city: "Singapore",
-      state: "Singapore", // Set state to "Singapore" instead of empty string
-      country: "SG",
-    },
     allow_repeated_payments: false,
     send_email: true,
     send_sms: false,

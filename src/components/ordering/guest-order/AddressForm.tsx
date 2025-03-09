@@ -1,196 +1,170 @@
-import Image from "next/image"
-import { useForm, FormProvider } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { sanitizeFormData } from "@/utils/formUtils"
+"use client"
 
-const addressSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100),
-  contactNumber: z.string().regex(/^[6-9]\d{7}$/, "Invalid Singapore phone number"),
-  email: z.string().email("Invalid email address"),
-  street: z.string().min(1, "Street is required").max(100),
-  unitNo: z.string().min(1, "Unit number is required").max(20),
-  postalCode: z.string().regex(/^\d{6}$/, "Invalid postal code"),
-})
+import type React from "react"
+import { useState, useEffect } from "react"
+import { validateSingaporeAddress, type ValidationResult } from "@/utils/addressValidation"
 
-export type AddressFormData = z.infer<typeof addressSchema>
+export interface AddressFormData {
+  name: string
+  contactNumber: string
+  email: string
+  street: string
+  unitNo: string
+  postalCode: string
+}
 
-type AddressFormProps = {
-  title: string
-  nameLabel: string
-  namePlaceholder: string
-  onPrevStep: () => void
-  onNextStep: (data: AddressFormData) => void
-  defaultValues?: Partial<AddressFormData>
+export interface AddressFormProps {
+  initialData: AddressFormData
+  onDataChange: (data: AddressFormData) => void
+  onValidityChange: (isValid: boolean) => void
+  title?: string
 }
 
 export function AddressForm({
-  title,
-  nameLabel,
-  namePlaceholder,
-  onPrevStep,
-  onNextStep,
-  defaultValues = {},
+  initialData = {
+    name: "",
+    contactNumber: "",
+    email: "",
+    street: "",
+    unitNo: "",
+    postalCode: "",
+  },
+  onDataChange,
+  onValidityChange,
+  title = "Address Information",
 }: AddressFormProps) {
-  const methods = useForm<AddressFormData>({
-    resolver: zodResolver(addressSchema),
-    mode: "onChange",
-    defaultValues: defaultValues, // Use the provided default values
-  })
+  const [formData, setFormData] = useState<AddressFormData>(initialData)
+  const [validationResult, setValidationResult] = useState<ValidationResult>({ isValid: false, errors: {} })
 
-  const onSubmit = (data: AddressFormData) => {
-    const sanitizedData = sanitizeFormData(data)
-    onNextStep(sanitizedData)
+  // This effect will run when initialData changes, but we don't validate on initialization
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData)
+      // Don't validate on initialization to avoid showing errors for empty fields
+    }
+  }, [initialData])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    const updatedData = { ...formData, [name]: value }
+    setFormData(updatedData)
+    onDataChange(updatedData)
+
+    // Only validate when user makes changes
+    const result = validateSingaporeAddress(updatedData)
+    setValidationResult(result)
+    onValidityChange(result.isValid)
   }
 
   return (
-    <Card className="bg-white shadow-lg">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-black">{title}</CardTitle>
-      </CardHeader>
-      <FormProvider {...methods}>
-        <Form {...methods}>
-          <form onSubmit={methods.handleSubmit(onSubmit)}>
-            <CardContent className="p-6">
-              <div className="space-y-6">
-                <FormField
-                  control={methods.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base mb-2 flex items-center text-black">
-                        <span className="text-black mr-1">*</span> {nameLabel}
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder={namePlaceholder} className="border-black" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold mb-4">{title}</h3>
 
-                <FormField
-                  control={methods.control}
-                  name="contactNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base mb-2 flex items-center text-black">
-                        <span className="text-black mr-1">*</span> Contact number
-                      </FormLabel>
-                      <FormControl>
-                        <div className="flex h-[42px]">
-                          <div className="border border-black rounded-l-md px-2 flex items-center bg-yellow-100 h-full">
-                            <Image
-                              src="/icons/sg-flag-rect.svg"
-                              alt="Singapore flag"
-                              width={30}
-                              height={20}
-                              className="mr-1"
-                            />
-                            <span className="text-sm text-black">+65</span>
-                          </div>
-                          <Input
-                            {...field}
-                            placeholder="Contact number"
-                            className="rounded-l-none border-black h-full"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-col">
+          <label htmlFor="name" className="mb-1 font-medium">
+            Name:
+          </label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            className={`border ${validationResult.errors.name ? "border-red-500" : "border-gray-300"} rounded-md p-2`}
+          />
+          {validationResult.errors.name && <p className="text-red-500 text-sm mt-1">{validationResult.errors.name}</p>}
+        </div>
 
-                <FormField
-                  control={methods.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base mb-2 flex items-center text-black">
-                        <span className="text-black mr-1">*</span> Email address
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} type="email" placeholder="Email address" className="border-black" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        <div className="flex flex-col">
+          <label htmlFor="contactNumber" className="mb-1 font-medium">
+            Contact Number:
+          </label>
+          <input
+            type="text"
+            id="contactNumber"
+            name="contactNumber"
+            value={formData.contactNumber}
+            onChange={handleChange}
+            className={`border ${validationResult.errors.contactNumber ? "border-red-500" : "border-gray-300"} rounded-md p-2`}
+            placeholder="8XXXXXXX"
+          />
+          {validationResult.errors.contactNumber && (
+            <p className="text-red-500 text-sm mt-1">{validationResult.errors.contactNumber}</p>
+          )}
+        </div>
+      </div>
 
-                <FormField
-                  control={methods.control}
-                  name="street"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base mb-2 flex items-center text-black">
-                        <span className="text-black mr-1">*</span> Street name, building
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Street name, building" className="border-black" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      <div className="flex flex-col">
+        <label htmlFor="email" className="mb-1 font-medium">
+          Email:
+        </label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          className={`border ${validationResult.errors.email ? "border-red-500" : "border-gray-300"} rounded-md p-2`}
+        />
+        {validationResult.errors.email && <p className="text-red-500 text-sm mt-1">{validationResult.errors.email}</p>}
+      </div>
 
-                <FormField
-                  control={methods.control}
-                  name="unitNo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base mb-2 flex items-center text-black">
-                        <span className="text-black mr-1">*</span> Unit no.
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Unit no." className="border-black" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      <div className="flex flex-col">
+        <label htmlFor="street" className="mb-1 font-medium">
+          Street Address:
+        </label>
+        <input
+          type="text"
+          id="street"
+          name="street"
+          value={formData.street}
+          onChange={handleChange}
+          className={`border ${validationResult.errors.street ? "border-red-500" : "border-gray-300"} rounded-md p-2`}
+        />
+        {validationResult.errors.street && (
+          <p className="text-red-500 text-sm mt-1">{validationResult.errors.street}</p>
+        )}
+      </div>
 
-                <FormField
-                  control={methods.control}
-                  name="postalCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base mb-2 flex items-center text-black">
-                        <span className="text-black mr-1">*</span> Postal code
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Postal code" className="border-black" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="px-6 py-4 flex justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onPrevStep}
-                className="border-black text-black hover:bg-yellow-100"
-              >
-                Back
-              </Button>
-              <Button
-                type="submit"
-                className="bg-black hover:bg-black/90 text-yellow-400"
-                disabled={!methods.formState.isValid}
-              >
-                Next
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
-      </FormProvider>
-    </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-col">
+          <label htmlFor="unitNo" className="mb-1 font-medium">
+            Unit Number:
+          </label>
+          <input
+            type="text"
+            id="unitNo"
+            name="unitNo"
+            value={formData.unitNo}
+            onChange={handleChange}
+            className={`border ${validationResult.errors.unitNo ? "border-red-500" : "border-gray-300"} rounded-md p-2`}
+            placeholder="#01-01"
+          />
+          {validationResult.errors.unitNo && (
+            <p className="text-red-500 text-sm mt-1">{validationResult.errors.unitNo}</p>
+          )}
+        </div>
+
+        <div className="flex flex-col">
+          <label htmlFor="postalCode" className="mb-1 font-medium">
+            Postal Code:
+          </label>
+          <input
+            type="text"
+            id="postalCode"
+            name="postalCode"
+            value={formData.postalCode}
+            onChange={handleChange}
+            className={`border ${validationResult.errors.postalCode ? "border-red-500" : "border-gray-300"} rounded-md p-2`}
+            placeholder="123456"
+          />
+          {validationResult.errors.postalCode && (
+            <p className="text-red-500 text-sm mt-1">{validationResult.errors.postalCode}</p>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 

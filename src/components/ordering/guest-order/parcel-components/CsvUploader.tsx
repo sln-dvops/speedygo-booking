@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useRef } from "react"
-import { Upload, FileText, AlertCircle, Check } from "lucide-react"
+import { Upload, FileText, AlertCircle, Check, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -128,6 +128,9 @@ export function CsvUploader({ setParcels, isValidDimensions }: CsvUploaderProps)
     fileInputRef.current?.click()
   }
 
+  // Get the template file path directly from environment variable
+  const templateFilePath = process.env.NEXT_PUBLIC_CSV_TEMPLATE_URL || ""
+
   return (
     <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
       <h3 className="font-medium text-black mb-2">Bulk Upload Parcels</h3>
@@ -145,6 +148,13 @@ export function CsvUploader({ setParcels, isValidDimensions }: CsvUploaderProps)
           Upload CSV
         </Button>
         <input type="file" ref={fileInputRef} accept=".csv" className="hidden" onChange={handleCsvUpload} />
+
+        <Button variant="outline" className="border-black text-black hover:bg-yellow-100" asChild>
+          <a href={templateFilePath} download="parcel_template.csv">
+            <Download className="mr-2 h-4 w-4" />
+            Download Template
+          </a>
+        </Button>
 
         <TooltipProvider>
           <Tooltip>

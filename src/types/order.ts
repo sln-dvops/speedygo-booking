@@ -24,6 +24,18 @@ export interface OrderDetails {
   totalWeight?: number
   bulkOrderId?: string // For child orders in a bulk order
   redirectUrl?: string // Added for custom redirect URL
+  recipients?: RecipientDetails[] // For bulk orders with multiple recipients
+}
+
+export interface RecipientDetails {
+  name: string
+  address: string
+  contactNumber: string
+  email: string
+  line1: string
+  line2?: string
+  postalCode: string
+  parcelIndex: number // To link recipient to specific parcel
 }
 
 export type PartialOrderDetails = Partial<OrderDetails>
@@ -39,14 +51,6 @@ export interface HitPayRequestBody {
   redirect_url: string
   webhook: string
   purpose: string
-  address: {
-    line1: string
-    line2: string
-    postal_code: string
-    city: string
-    state: string
-    country: string
-  }
   allow_repeated_payments: boolean
   send_email: boolean
   send_sms: boolean
@@ -83,5 +87,6 @@ export interface OrderWithParcels extends OrderDetails {
     totalParcels: number
     totalWeight: number
   }
+  recipients?: RecipientDetails[] // For bulk orders with multiple recipients
 }
 
