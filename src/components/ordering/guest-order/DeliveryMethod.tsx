@@ -1,6 +1,6 @@
 "use client"
 import { useState } from "react"
-import { Info, ChevronDown, ChevronUp, Package } from "lucide-react"
+import { Info, ChevronDown, ChevronUp, Package, DollarSign } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog"
 
 import type { DeliveryMethod as DeliveryMethodType, ParcelDimensions } from "@/types/pricing"
-import { calculateShippingPrice, PRICING_TIERS } from "@/types/pricing"
+import { calculateShippingPrice, PRICING_TIERS, HAND_TO_HAND_FEE } from "@/types/pricing"
 
 type DeliveryMethodProps = {
   onPrevStep: () => void
@@ -36,6 +36,7 @@ export function DeliveryMethod({
   selectedDimensions = [],
   isBulkOrder = false,
   totalParcels = 1,
+  totalWeight,
   selectedDeliveryMethod,
   setSelectedDeliveryMethod,
 }: DeliveryMethodProps) {
@@ -46,7 +47,9 @@ export function DeliveryMethod({
   const parcelDetails = selectedDimensions.map((parcel, index) => {
     const volumetricWeight = (parcel.length * parcel.width * parcel.height) / 5000
     const effectiveWeight = Math.max(parcel.weight, volumetricWeight)
-    const price = calculateShippingPrice(parcel, selectedDeliveryMethod || "atl")
+    const basePrice = calculateShippingPrice(parcel, "atl") // Calculate base price without Hand-to-Hand fee
+    const handToHandFee = selectedDeliveryMethod === "hand-to-hand" ? HAND_TO_HAND_FEE : 0
+    const totalPrice = basePrice + handToHandFee
     const applicableTier =
       PRICING_TIERS.find((tier) => effectiveWeight <= tier.maxWeight && volumetricWeight <= tier.maxVolumetric) ||
       PRICING_TIERS[PRICING_TIERS.length - 1]
@@ -57,14 +60,18 @@ export function DeliveryMethod({
       actualWeight: parcel.weight,
       volumetricWeight,
       effectiveWeight,
-      price,
+      basePrice,
+      handToHandFee,
+      totalPrice,
       applicableTier,
       tierIndex,
       dimensions: `${parcel.length}cm × ${parcel.width}cm × ${parcel.height}cm`,
     }
   })
 
-  const totalPrice = parcelDetails.reduce((sum, detail) => sum + detail.price, 0)
+  const totalBasePrice = parcelDetails.reduce((sum, detail) => sum + detail.basePrice, 0)
+  const totalHandToHandFee = selectedDeliveryMethod === "hand-to-hand" ? HAND_TO_HAND_FEE * parcelDetails.length : 0
+  const totalPrice = totalBasePrice + totalHandToHandFee
 
   if (selectedDimensions.length === 0) {
     return (
@@ -128,7 +135,7 @@ export function DeliveryMethod({
                   <p className="font-medium text-black">Hand to Hand</p>
                   <p className="text-sm text-gray-600">Parcel will be handed directly to recipient</p>
                 </div>
-                <span className="text-black font-medium">+$2.50</span>
+                <span className="text-black font-medium">+${HAND_TO_HAND_FEE.toFixed(2)} per parcel</span>
               </div>
             </Label>
           </RadioGroup>
@@ -203,9 +210,21 @@ export function DeliveryMethod({
                           Tier {detail.tierIndex} (${detail.applicableTier.price.toFixed(2)})
                         </p>
                       </div>
-                      <div>
-                        <p className="font-medium">Parcel Price:</p>
-                        <p className="text-lg font-semibold">${detail.price.toFixed(2)}</p>
+                    </div>
+                    <div className="mt-4 pt-2 border-t border-gray-200">
+                      <div className="flex justify-between items-center">
+                        <p className="font-medium">Base Price:</p>
+                        <p className="text-lg font-semibold">${detail.basePrice.toFixed(2)}</p>
+                      </div>
+                      {selectedDeliveryMethod === "hand-to-hand" && (
+                        <div className="flex justify-between items-center mt-1">
+                          <p className="font-medium">Hand-to-Hand Fee:</p>
+                          <p className="text-lg font-semibold text-green-600">+${detail.handToHandFee.toFixed(2)}</p>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
+                        <p className="font-medium">Total Parcel Price:</p>
+                        <p className="text-xl font-bold text-black">${detail.totalPrice.toFixed(2)}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -215,14 +234,27 @@ export function DeliveryMethod({
           )}
         </div>
 
-        {selectedDeliveryMethod && (
-          <div className="mt-4 p-4 bg-green-100 rounded-lg">
-            <p className="text-xl font-semibold text-black">Total Price: ${totalPrice.toFixed(2)}</p>
-            {selectedDeliveryMethod === "hand-to-hand" && (
-              <p className="text-sm text-gray-600 mt-1">Includes $2.50 Hand-to-Hand fee</p>
-            )}
+        <div className="mt-4 p-4 bg-green-100 rounded-lg">
+          <div className="flex justify-between items-center">
+            <p className="text-lg font-semibold text-black">Base Price:</p>
+            <p className="text-xl font-bold text-black">${totalBasePrice.toFixed(2)}</p>
           </div>
-        )}
+          {selectedDeliveryMethod === "hand-to-hand" && (
+            <div className="flex justify-between items-center mt-2">
+              <p className="text-lg font-semibold text-black">
+                Hand-to-Hand Fee (${HAND_TO_HAND_FEE.toFixed(2)} × {parcelDetails.length}):
+              </p>
+              <p className="text-xl font-bold text-green-600">+${totalHandToHandFee.toFixed(2)}</p>
+            </div>
+          )}
+          <div className="flex justify-between items-center mt-4 pt-2 border-t border-gray-300">
+            <p className="text-xl font-semibold text-black">Total Price:</p>
+            <p className="text-2xl font-bold text-black flex items-center">
+              <DollarSign className="h-6 w-6 mr-1" />
+              {totalPrice.toFixed(2)}
+            </p>
+          </div>
+        </div>
 
         <div className="mt-6">
           <div className="text-gray-600">
