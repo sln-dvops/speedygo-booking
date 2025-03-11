@@ -49,6 +49,18 @@ export function SendTo({
         postalCode: recipient.postalCode,
       }))
     }
+    if (!isBulkOrder && formData) {
+      return [
+        {
+          name: formData.name,
+          contactNumber: formData.contactNumber,
+          email: formData.email,
+          street: formData.street,
+          unitNo: formData.unitNo,
+          postalCode: formData.postalCode,
+        },
+      ]
+    }
     if (parcels) {
       return parcels.map(() => ({
         name: "",
@@ -88,30 +100,33 @@ export function SendTo({
     setIsFormValid(isValid)
   }
 
-  const handleBulkAddressChange = (index: number, data: BaseAddressFormData) => {
+  const handleAddressChange = (index: number, data: BaseAddressFormData) => {
     setRecipientAddresses((prevAddresses) => {
       const newAddresses = [...prevAddresses]
       newAddresses[index] = data
       return newAddresses
     })
 
-    const updatedRecipients = recipients.map((recipient, idx) => {
-      if (idx === index) {
-        return {
-          ...recipient,
-          name: data.name,
-          contactNumber: data.contactNumber,
-          email: data.email,
-          address: `${data.street}, ${data.unitNo}, ${data.postalCode}, Singapore`,
-          line1: data.street,
-          line2: data.unitNo,
-          postalCode: data.postalCode,
+    if (isBulkOrder) {
+      const updatedRecipients = recipients.map((recipient, idx) => {
+        if (idx === index) {
+          return {
+            ...recipient,
+            name: data.name,
+            contactNumber: data.contactNumber,
+            email: data.email,
+            address: `${data.street}, ${data.unitNo}, ${data.postalCode}, Singapore`,
+            line1: data.street,
+            line2: data.unitNo,
+            postalCode: data.postalCode,
+          }
         }
-      }
-      return recipient
-    })
-
-    updateRecipients(updatedRecipients)
+        return recipient
+      })
+      updateRecipients(updatedRecipients)
+    } else {
+      updateFormData(data)
+    }
   }
 
   const handleValidityChange = (index: number, isValid: boolean) => {
@@ -215,7 +230,7 @@ export function SendTo({
 
                   <AddressForm
                     initialData={recipientAddresses[index]}
-                    onDataChange={(data) => handleBulkAddressChange(index, data)}
+                    onDataChange={(data) => handleAddressChange(index, data)}
                     onValidityChange={(isValid: boolean) => handleValidityChange(index, isValid)}
                     title="Recipient Information"
                   />
@@ -259,8 +274,8 @@ export function SendTo({
           </div>
         ) : (
           <AddressForm
-            initialData={formData}
-            onDataChange={updateFormData}
+            initialData={recipientAddresses[0]}
+            onDataChange={(data) => handleAddressChange(0, data)}
             onValidityChange={handleFormValidityChange}
             title="Recipient Information"
           />

@@ -119,7 +119,9 @@ export function Payment({
             <div className="flex justify-between">
               <span className="text-gray-600">Recipient:</span>
               <span className="font-medium text-black">
-                {orderDetails.isBulkOrder ? `Multiple (${selectedDimensions.length})` : orderDetails.recipientName}
+                {orderDetails.isBulkOrder
+                  ? `Multiple (${selectedDimensions.length})`
+                  : orderDetails.recipientName || "Not specified"}
               </span>
             </div>
 
