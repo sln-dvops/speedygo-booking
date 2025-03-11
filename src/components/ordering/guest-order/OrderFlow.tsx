@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useUnsavedChanges } from "@/hooks/useUnsavedChanges"
-import { UnsavedChangesDialog } from "@/components/UnsavedChangesDialog"
 import { OrderTypeSelection } from "@/components/ordering/guest-order/OrderTypeSelection"
 import { ParcelDimensions } from "@/components/ordering/guest-order/ParcelSize"
 import { DeliveryMethod } from "@/components/ordering/guest-order/DeliveryMethod"
@@ -15,7 +13,6 @@ import type { ParcelDimensions as ParcelDimensionsType, DeliveryMethod as Delive
 import type { OrderDetails, PartialOrderDetails, RecipientDetails } from "@/types/order"
 import type { AddressFormData } from "@/components/ordering/guest-order/AddressForm"
 
-// Create an extended type that includes recipients
 interface ExtendedAddressFormData extends AddressFormData {
   recipients?: RecipientDetails[]
 }
@@ -43,7 +40,7 @@ export function OrderFlow() {
     parcelSize: "",
     deliveryMethod: undefined,
     isBulkOrder: false,
-    recipients: [], // Add this line to initialize recipients array
+    recipients: [],
   })
   const [senderFormData, setSenderFormData] = useState<AddressFormData>({
     name: "",
@@ -63,30 +60,8 @@ export function OrderFlow() {
     recipients: [],
   })
   const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState<DeliveryMethodType | undefined>(undefined)
+  const [recipients, setRecipients] = useState<RecipientDetails[]>([])
 
-  const { setUnsavedChanges, isDialogOpen, handleConfirmNavigation, handleCancelNavigation } = useUnsavedChanges()
-
-  useEffect(() => {
-    const hasUnsavedChanges =
-      currentStep > 0 &&
-      (selectedDimensions !== null ||
-        Object.values(senderFormData).some((value) => value !== "") ||
-        Object.values(recipientFormData).some((value) => value !== "" && value !== undefined) ||
-        Object.values(orderDetails).some((value) => value !== "" && value !== null) ||
-        selectedDeliveryMethod !== undefined)
-
-    setUnsavedChanges(hasUnsavedChanges)
-  }, [
-    currentStep,
-    selectedDimensions,
-    senderFormData,
-    recipientFormData,
-    orderDetails,
-    setUnsavedChanges,
-    selectedDeliveryMethod,
-  ])
-
-  // Update isBulkOrder whenever orderType changes
   useEffect(() => {
     if (orderType) {
       setOrderDetails((prev) => ({
@@ -127,14 +102,13 @@ export function OrderFlow() {
   const updateRecipientFormData = (data: ExtendedAddressFormData) => {
     setRecipientFormData(data)
 
-    // Check if data contains recipients array (for bulk orders)
     if (data.recipients && data.recipients.length > 0) {
+      setRecipients(data.recipients)
       setOrderDetails((prevDetails) => ({
         ...prevDetails,
         recipients: data.recipients,
       }))
     } else {
-      // For individual orders, update as before
       setOrderDetails((prevDetails) => ({
         ...prevDetails,
         recipientName: data.name,
@@ -148,8 +122,12 @@ export function OrderFlow() {
     }
   }
 
-  const clearUnsavedChanges = () => {
-    setUnsavedChanges(false)
+  const updateRecipients = (newRecipients: RecipientDetails[]) => {
+    setRecipients(newRecipients)
+    setOrderDetails((prevDetails) => ({
+      ...prevDetails,
+      recipients: newRecipients,
+    }))
   }
 
   return (
@@ -186,6 +164,7 @@ export function OrderFlow() {
                     onNextStep={handleNextStep}
                     selectedDimensions={selectedDimensions}
                     setSelectedDimensions={setSelectedDimensions}
+                    setRecipients={setRecipients}
                     isBulkOrder={orderType === "bulk"}
                   />
                 </motion.div>
@@ -202,7 +181,7 @@ export function OrderFlow() {
                   <DeliveryMethod
                     onPrevStep={handlePrevStep}
                     onNextStep={handleNextStep}
-                    selectedDimensions={selectedDimensions[0]} // Pass the first parcel for pricing calculation
+                    selectedDimensions={selectedDimensions[0]}
                     isBulkOrder={orderType === "bulk"}
                     totalParcels={selectedDimensions.length}
                     totalWeight={selectedDimensions.reduce((sum, parcel) => sum + parcel.weight, 0)}
@@ -237,24 +216,16 @@ export function OrderFlow() {
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  {orderType === "individual" ? (
-                    <SendTo
-                      onPrevStep={handlePrevStep}
-                      onNextStep={handleNextStep}
-                      formData={recipientFormData}
-                      updateFormData={updateRecipientFormData}
-                    />
-                  ) : (
-                    // For bulk orders, we'll handle recipient addresses differently
-                    <SendTo
-                      onPrevStep={handlePrevStep}
-                      onNextStep={handleNextStep}
-                      formData={recipientFormData}
-                      updateFormData={updateRecipientFormData}
-                      isBulkOrder={true}
-                      parcels={selectedDimensions}
-                    />
-                  )}
+                  <SendTo
+                    onPrevStep={handlePrevStep}
+                    onNextStep={handleNextStep}
+                    formData={recipientFormData}
+                    updateFormData={updateRecipientFormData}
+                    isBulkOrder={orderType === "bulk"}
+                    parcels={selectedDimensions}
+                    recipients={recipients}
+                    updateRecipients={updateRecipients}
+                  />
                 </motion.div>
               )}
 
@@ -272,7 +243,7 @@ export function OrderFlow() {
                     setOrderDetails={setOrderDetails}
                     selectedDimensions={selectedDimensions}
                     selectedDeliveryMethod={selectedDeliveryMethod}
-                    clearUnsavedChanges={clearUnsavedChanges}
+                    clearUnsavedChanges={() => {}}
                   />
                 </motion.div>
               )}
@@ -280,11 +251,6 @@ export function OrderFlow() {
           </div>
         </div>
       </div>
-      <UnsavedChangesDialog
-        isOpen={isDialogOpen}
-        onClose={handleCancelNavigation}
-        onConfirm={handleConfirmNavigation}
-      />
     </>
   )
 }

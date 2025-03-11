@@ -9,13 +9,15 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 import type { ParcelDimensions } from "@/types/pricing"
+import type { RecipientDetails } from "@/types/order"
 
 interface CsvUploaderProps {
   setParcels: React.Dispatch<React.SetStateAction<ParcelDimensions[]>>
+  setRecipients: (recipients: RecipientDetails[]) => void
   isValidDimensions: (dimensions: ParcelDimensions) => boolean
 }
 
-export function CsvUploader({ setParcels, isValidDimensions }: CsvUploaderProps) {
+export function CsvUploader({ setParcels, setRecipients, isValidDimensions }: CsvUploaderProps) {
   const [csvUploadStatus, setCsvUploadStatus] = useState<"idle" | "success" | "error">("idle")
   const [csvErrorMessage, setCsvErrorMessage] = useState<string>("")
   const [uploadedParcelCount, setUploadedParcelCount] = useState<number>(0)
@@ -33,7 +35,7 @@ export function CsvUploader({ setParcels, isValidDimensions }: CsvUploaderProps)
     reader.onload = (e) => {
       try {
         const csvText = e.target?.result as string
-        const parsedParcels = parseCsv(csvText)
+        const { parsedParcels, parsedRecipients } = parseCsv(csvText)
 
         if (parsedParcels.length === 0) {
           setCsvUploadStatus("error")
@@ -49,8 +51,9 @@ export function CsvUploader({ setParcels, isValidDimensions }: CsvUploaderProps)
           return
         }
 
-        // Set the parcels
+        // Set the parcels and recipients
         setParcels(parsedParcels)
+        setRecipients(parsedRecipients)
         setUploadedParcelCount(parsedParcels.length)
         setCsvUploadStatus("success")
 
@@ -73,7 +76,7 @@ export function CsvUploader({ setParcels, isValidDimensions }: CsvUploaderProps)
     reader.readAsText(file)
   }
 
-  const parseCsv = (csvText: string): ParcelDimensions[] => {
+  const parseCsv = (csvText: string): { parsedParcels: ParcelDimensions[]; parsedRecipients: RecipientDetails[] } => {
     // Split by lines and remove empty lines
     const lines = csvText.split("\n").filter((line) => line.trim() !== "")
 
@@ -84,7 +87,18 @@ export function CsvUploader({ setParcels, isValidDimensions }: CsvUploaderProps)
 
     // Get header row and check required columns
     const header = lines[0].split(",").map((col) => col.trim().toLowerCase())
-    const requiredColumns = ["weight", "length", "width", "height"]
+    const requiredColumns = [
+      "weight",
+      "length",
+      "width",
+      "height",
+      "name",
+      "contactnumber",
+      "email",
+      "street",
+      "unitno",
+      "postalcode",
+    ]
 
     // Check if all required columns exist
     const missingColumns = requiredColumns.filter((col) => !header.includes(col))
@@ -97,14 +111,36 @@ export function CsvUploader({ setParcels, isValidDimensions }: CsvUploaderProps)
     const lengthIndex = header.indexOf("length")
     const widthIndex = header.indexOf("width")
     const heightIndex = header.indexOf("height")
+    const nameIndex = header.indexOf("name")
+    const contactNumberIndex = header.indexOf("contactnumber")
+    const emailIndex = header.indexOf("email")
+    const streetIndex = header.indexOf("street")
+    const unitNoIndex = header.indexOf("unitno")
+    const postalCodeIndex = header.indexOf("postalcode")
 
     // Parse data rows
-    const parcels: ParcelDimensions[] = []
+    const parsedParcels: ParcelDimensions[] = []
+    const parsedRecipients: RecipientDetails[] = []
+
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(",").map((val) => val.trim())
 
       // Skip rows with insufficient values
-      if (values.length <= Math.max(weightIndex, lengthIndex, widthIndex, heightIndex)) {
+      if (
+        values.length <=
+        Math.max(
+          weightIndex,
+          lengthIndex,
+          widthIndex,
+          heightIndex,
+          nameIndex,
+          contactNumberIndex,
+          emailIndex,
+          streetIndex,
+          unitNoIndex,
+          postalCodeIndex,
+        )
+      ) {
         continue
       }
 
@@ -115,13 +151,25 @@ export function CsvUploader({ setParcels, isValidDimensions }: CsvUploaderProps)
         height: Number.parseFloat(values[heightIndex]) || 0,
       }
 
-      // Only add valid parcels
+      const recipient: RecipientDetails = {
+        name: values[nameIndex],
+        contactNumber: values[contactNumberIndex],
+        email: values[emailIndex],
+        address: `${values[streetIndex]}, ${values[unitNoIndex]}, ${values[postalCodeIndex]}, Singapore`,
+        line1: values[streetIndex],
+        line2: values[unitNoIndex],
+        postalCode: values[postalCodeIndex],
+        parcelIndex: parsedParcels.length, // Set the parcelIndex to the current length of parsedParcels
+      }
+
+      // Only add valid parcels and their corresponding recipients
       if (isValidDimensions(parcel)) {
-        parcels.push(parcel)
+        parsedParcels.push(parcel)
+        parsedRecipients.push(recipient)
       }
     }
 
-    return parcels
+    return { parsedParcels, parsedRecipients }
   }
 
   const handleCsvButtonClick = () => {
@@ -133,9 +181,10 @@ export function CsvUploader({ setParcels, isValidDimensions }: CsvUploaderProps)
 
   return (
     <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
-      <h3 className="font-medium text-black mb-2">Bulk Upload Parcels</h3>
+      <h3 className="font-medium text-black mb-2">Bulk Upload Parcels and Recipients</h3>
       <p className="text-sm text-gray-600 mb-4">
-        Upload a CSV file with parcel details. The CSV must include columns for weight, length, width, and height.
+        Upload a CSV file with parcel details and recipient information. The CSV must include columns for weight,
+        length, width, height, name, contactNumber, email, street, unitNo, and postalCode.
       </p>
 
       <div className="flex items-center gap-2">
@@ -150,7 +199,7 @@ export function CsvUploader({ setParcels, isValidDimensions }: CsvUploaderProps)
         <input type="file" ref={fileInputRef} accept=".csv" className="hidden" onChange={handleCsvUpload} />
 
         <Button variant="outline" className="border-black text-black hover:bg-yellow-100" asChild>
-          <a href={templateFilePath} download="parcel_template.csv">
+          <a href={templateFilePath} download="parcel_and_recipient_template.csv">
             <Download className="mr-2 h-4 w-4" />
             Download Template
           </a>
@@ -167,11 +216,11 @@ export function CsvUploader({ setParcels, isValidDimensions }: CsvUploaderProps)
               <p className="text-xs">
                 CSV Format:
                 <br />
-                weight,length,width,height
+                weight,length,width,height,name,contactNumber,email,street,unitNo,postalCode
                 <br />
-                5,30,20,15
+                5,30,20,15,John Doe,12345678,john@example.com,123 Main St,#01-01,123456
                 <br />
-                10,40,30,20
+                10,40,30,20,Jane Smith,87654321,jane@example.com,456 Elm St,#02-02,654321
               </p>
             </TooltipContent>
           </Tooltip>
@@ -183,7 +232,8 @@ export function CsvUploader({ setParcels, isValidDimensions }: CsvUploaderProps)
           <Check className="h-4 w-4 text-green-600" />
           <AlertTitle className="text-green-600">Success</AlertTitle>
           <AlertDescription className="text-green-600">
-            {uploadedParcelCount} {uploadedParcelCount === 1 ? "parcel" : "parcels"} successfully imported.
+            {uploadedParcelCount} {uploadedParcelCount === 1 ? "parcel" : "parcels"} with recipient details successfully
+            imported.
           </AlertDescription>
         </Alert>
       )}

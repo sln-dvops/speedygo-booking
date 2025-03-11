@@ -10,10 +10,8 @@ import { validateSingaporeAddress } from "@/utils/addressValidation"
 import type { ParcelDimensions } from "@/types/pricing"
 import type { RecipientDetails } from "@/types/order"
 
-// Import the AddressFormData type but extend it for our local use
 import type { AddressFormData as BaseAddressFormData } from "@/components/ordering/guest-order/AddressForm"
 
-// Create an extended type that includes recipients
 interface ExtendedAddressFormData extends BaseAddressFormData {
   recipients?: RecipientDetails[]
 }
@@ -25,6 +23,8 @@ type SendToProps = {
   updateFormData: (data: ExtendedAddressFormData) => void
   isBulkOrder?: boolean
   parcels?: ParcelDimensions[] | null
+  recipients: RecipientDetails[]
+  updateRecipients: (recipients: RecipientDetails[]) => void
 }
 
 export function SendTo({
@@ -34,13 +34,13 @@ export function SendTo({
   updateFormData,
   isBulkOrder = false,
   parcels = null,
+  recipients,
+  updateRecipients,
 }: SendToProps) {
   const [isFormValid, setIsFormValid] = useState(false)
   const [recipientAddresses, setRecipientAddresses] = useState<BaseAddressFormData[]>(() => {
-    // If we already have recipients data from a previous visit to this step,
-    // use that to initialize our form state
-    if (isBulkOrder && formData.recipients && formData.recipients.length > 0 && parcels) {
-      return formData.recipients.map((recipient: RecipientDetails) => ({
+    if (isBulkOrder && recipients.length > 0) {
+      return recipients.map((recipient: RecipientDetails) => ({
         name: recipient.name,
         contactNumber: recipient.contactNumber,
         email: recipient.email,
@@ -49,8 +49,6 @@ export function SendTo({
         postalCode: recipient.postalCode,
       }))
     }
-
-    // Otherwise initialize with empty forms for each parcel
     if (parcels) {
       return parcels.map(() => ({
         name: "",
@@ -66,7 +64,6 @@ export function SendTo({
   const [activeTab, setActiveTab] = useState("parcel-1")
   const [validTabs, setValidTabs] = useState<string[]>([])
 
-  // Validate initial form data when component mounts or formData changes
   useEffect(() => {
     if (!isBulkOrder && formData) {
       const result = validateSingaporeAddress(formData)
@@ -74,18 +71,15 @@ export function SendTo({
     }
   }, [formData, isBulkOrder])
 
-  // Validate initial bulk addresses when component mounts
   useEffect(() => {
     if (isBulkOrder && parcels && recipientAddresses.length > 0) {
       const newValidTabs: string[] = []
-
       recipientAddresses.forEach((address, index) => {
         const result = validateSingaporeAddress(address)
         if (result.isValid) {
           newValidTabs.push(`parcel-${index + 1}`)
         }
       })
-
       setValidTabs(newValidTabs)
     }
   }, [isBulkOrder, parcels, recipientAddresses])
@@ -95,52 +89,38 @@ export function SendTo({
   }
 
   const handleBulkAddressChange = (index: number, data: BaseAddressFormData) => {
-    // Update the local state first
     setRecipientAddresses((prevAddresses) => {
       const newAddresses = [...prevAddresses]
       newAddresses[index] = data
       return newAddresses
     })
 
-    // Use useEffect to handle parent state updates after render
+    const updatedRecipients = recipients.map((recipient, idx) => {
+      if (idx === index) {
+        return {
+          ...recipient,
+          name: data.name,
+          contactNumber: data.contactNumber,
+          email: data.email,
+          address: `${data.street}, ${data.unitNo}, ${data.postalCode}, Singapore`,
+          line1: data.street,
+          line2: data.unitNo,
+          postalCode: data.postalCode,
+        }
+      }
+      return recipient
+    })
+
+    updateRecipients(updatedRecipients)
   }
-
-  // Add this useEffect to handle parent state updates after render
-  useEffect(() => {
-    if (isBulkOrder && recipientAddresses.length > 0) {
-      // Create the recipients array with the updated data
-      const updatedRecipients = recipientAddresses.map((address, idx) => ({
-        name: address.name,
-        contactNumber: address.contactNumber,
-        email: address.email,
-        address: `${address.street}, ${address.unitNo}, ${address.postalCode}, Singapore`,
-        line1: address.street,
-        line2: address.unitNo,
-        postalCode: address.postalCode,
-        parcelIndex: idx,
-      }))
-
-      // Update the parent component with all recipient details
-      const updatedFormData: ExtendedAddressFormData = {
-        ...formData,
-        recipients: updatedRecipients,
-      }
-
-      // Only update if recipients have actually changed
-      if (JSON.stringify(updatedRecipients) !== JSON.stringify(formData.recipients || [])) {
-        updateFormData(updatedFormData)
-      }
-    }
-  }, [recipientAddresses, isBulkOrder, formData, updateFormData])
 
   const handleValidityChange = (index: number, isValid: boolean) => {
     const tabId = `parcel-${index + 1}`
     setValidTabs((prevTabs) => {
-      if (isValid) {
-        if (!prevTabs.includes(tabId)) {
-          return [...prevTabs, tabId]
-        }
-      } else {
+      if (isValid && !prevTabs.includes(tabId)) {
+        return [...prevTabs, tabId]
+      }
+      if (!isValid) {
         return prevTabs.filter((id) => id !== tabId)
       }
       return prevTabs
@@ -162,7 +142,14 @@ export function SendTo({
   }
 
   const handleNext = () => {
-    // We don't need to update recipients here anymore since the useEffect handles it
+    if (isBulkOrder) {
+      updateFormData({
+        ...formData,
+        recipients: recipients,
+      })
+    } else {
+      updateFormData(recipientAddresses[0])
+    }
     onNextStep()
   }
 
@@ -184,7 +171,8 @@ export function SendTo({
             <div className="bg-yellow-100 p-4 rounded-lg mb-4">
               <h3 className="font-medium text-black mb-2">Multiple Recipients</h3>
               <p className="text-sm text-gray-600">
-                Please provide the delivery details for each parcel. Use the tabs below to navigate between parcels.
+                Please review or update the delivery details for each parcel. Use the tabs below to navigate between
+                parcels.
               </p>
             </div>
 

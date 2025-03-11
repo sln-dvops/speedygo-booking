@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import type React from "react"
+
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,11 +13,13 @@ import { ParcelList } from "./parcel-components/ParcelList"
 import { ParcelSummary } from "./parcel-components/ParcelSummary"
 
 import type { ParcelDimensions } from "@/types/pricing"
+import type { RecipientDetails } from "@/types/order"
 
 type ParcelDimensionsProps = {
   onNextStep: () => void
   selectedDimensions: ParcelDimensions[] | null
   setSelectedDimensions: (dimensions: ParcelDimensions[]) => void
+  setRecipients: React.Dispatch<React.SetStateAction<RecipientDetails[]>>
   isBulkOrder?: boolean
 }
 
@@ -23,6 +27,7 @@ export function ParcelDimensions({
   onNextStep,
   selectedDimensions,
   setSelectedDimensions,
+  setRecipients,
   isBulkOrder = false,
 }: ParcelDimensionsProps) {
   const [currentParcel, setCurrentParcel] = useState<ParcelDimensions>({
@@ -122,6 +127,14 @@ export function ParcelDimensions({
     return parcels.reduce((total, parcel) => total + parcel.weight, 0)
   }
 
+  // Wrap setRecipients in useCallback to avoid unnecessary re-renders
+  const handleSetRecipients = useCallback(
+    (newRecipients: RecipientDetails[]) => {
+      setRecipients(newRecipients)
+    },
+    [setRecipients],
+  )
+
   return (
     <Card className="bg-white shadow-lg">
       <CardHeader>
@@ -151,7 +164,13 @@ export function ParcelDimensions({
         )}
 
         {/* CSV Upload Component - Only show for bulk orders */}
-        {isBulkOrder && <CsvUploader setParcels={setParcels} isValidDimensions={isValidDimensions} />}
+        {isBulkOrder && (
+          <CsvUploader
+            setParcels={setParcels}
+            setRecipients={handleSetRecipients}
+            isValidDimensions={isValidDimensions}
+          />
+        )}
 
         {/* Parcel Form Component */}
         <ParcelForm
