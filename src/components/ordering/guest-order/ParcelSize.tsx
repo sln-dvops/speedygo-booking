@@ -15,12 +15,23 @@ import { ParcelSummary } from "./parcel-components/ParcelSummary"
 import type { ParcelDimensions } from "@/types/pricing"
 import type { RecipientDetails } from "@/types/order"
 
+// Define ExtendedParcelDimensions
+export interface ExtendedParcelDimensions extends ParcelDimensions {
+  effectiveWeight: number
+}
+
 type ParcelDimensionsProps = {
   onNextStep: () => void
   selectedDimensions: ParcelDimensions[] | null
-  setSelectedDimensions: (dimensions: ParcelDimensions[]) => void
+  setSelectedDimensions: (dimensions: ExtendedParcelDimensions[]) => void
   setRecipients: React.Dispatch<React.SetStateAction<RecipientDetails[]>>
   isBulkOrder?: boolean
+}
+
+// Move this function to the top of the file, outside of the component
+const calculateEffectiveWeight = (parcel: ParcelDimensions): number => {
+  const volumetricWeight = (parcel.length * parcel.width * parcel.height) / 5000
+  return Math.max(parcel.weight, volumetricWeight)
 }
 
 export function ParcelDimensions({
@@ -35,8 +46,11 @@ export function ParcelDimensions({
     length: 0,
     width: 0,
     height: 0,
+    effectiveWeight: 0, // Initialize with 0
   })
-  const [parcels, setParcels] = useState<ParcelDimensions[]>(selectedDimensions || [])
+  const [parcels, setParcels] = useState<ParcelDimensions[]>(() =>
+    selectedDimensions ? selectedDimensions.map((d) => ({ ...d, effectiveWeight: calculateEffectiveWeight(d) })) : [],
+  )
   const [volumetricWeight, setVolumetricWeight] = useState(0)
   const [effectiveWeight, setEffectiveWeight] = useState(0)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
@@ -53,12 +67,22 @@ export function ParcelDimensions({
 
   const handleDimensionChange = (field: keyof ParcelDimensions, value: string) => {
     const numValue = Number.parseFloat(value) || 0
-    setCurrentParcel((prev) => ({
-      ...prev,
-      [field]: numValue,
-    }))
+    setCurrentParcel((prev) => {
+      const updatedParcel = { ...prev, [field]: numValue }
+      return {
+        ...updatedParcel,
+        effectiveWeight: calculateEffectiveWeight(updatedParcel),
+      }
+    })
   }
 
+  // Helper function to calculate effective weight
+  // const calculateEffectiveWeight = (parcel: ParcelDimensions): number => {
+  //   const volumetricWeight = (parcel.length * parcel.width * parcel.height) / 5000
+  //   return Math.max(parcel.weight, volumetricWeight)
+  // }
+
+  // Modify the handleAddParcel function
   const handleAddParcel = () => {
     if (isValidDimensions(currentParcel)) {
       if (editingIndex !== null) {
@@ -78,6 +102,7 @@ export function ParcelDimensions({
         length: 0,
         width: 0,
         height: 0,
+        effectiveWeight: 0,
       })
     }
   }
@@ -98,11 +123,13 @@ export function ParcelDimensions({
         length: 0,
         width: 0,
         height: 0,
+        effectiveWeight: 0,
       })
       setEditingIndex(null)
     }
   }
 
+  // Update the handleContinue function
   const handleContinue = () => {
     if (parcels.length > 0) {
       setSelectedDimensions(parcels)
@@ -135,6 +162,15 @@ export function ParcelDimensions({
     [setRecipients],
   )
 
+  // Update the setParcels function to convert ParcelDimensions to ExtendedParcelDimensions
+  const handleSetParcels = (newParcels: ParcelDimensions[]) => {
+    const extendedParcels: ExtendedParcelDimensions[] = newParcels.map((parcel) => ({
+      ...parcel,
+      effectiveWeight: calculateEffectiveWeight(parcel),
+    }))
+    setParcels(extendedParcels)
+  }
+
   return (
     <Card className="bg-white shadow-lg">
       <CardHeader>
@@ -157,8 +193,8 @@ export function ParcelDimensions({
           <div className="bg-yellow-100 p-4 rounded-lg mb-4">
             <h3 className="font-medium text-black mb-2">Bulk Order Information</h3>
             <p className="text-sm text-gray-600">
-              For bulk orders, you can add multiple parcels here. In the next steps, you&apos;ll be able to specify different
-              recipient addresses for each parcel.
+              For bulk orders, you can add multiple parcels here. In the next steps, you&apos;ll be able to specify
+              different recipient addresses for each parcel.
             </p>
           </div>
         )}
@@ -166,7 +202,7 @@ export function ParcelDimensions({
         {/* CSV Upload Component - Only show for bulk orders */}
         {isBulkOrder && (
           <CsvUploader
-            setParcels={setParcels}
+            setParcels={handleSetParcels}
             setRecipients={handleSetRecipients}
             isValidDimensions={isValidDimensions}
           />

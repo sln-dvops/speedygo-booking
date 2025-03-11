@@ -12,7 +12,7 @@ import type { ParcelDimensions } from "@/types/pricing"
 import type { RecipientDetails } from "@/types/order"
 
 interface CsvUploaderProps {
-  setParcels: React.Dispatch<React.SetStateAction<ParcelDimensions[]>>
+  setParcels: (parcels: ParcelDimensions[]) => void
   setRecipients: (recipients: RecipientDetails[]) => void
   isValidDimensions: (dimensions: ParcelDimensions) => boolean
 }
@@ -144,11 +144,17 @@ export function CsvUploader({ setParcels, setRecipients, isValidDimensions }: Cs
         continue
       }
 
+      const weight = Number.parseFloat(values[weightIndex]) || 0
+      const length = Number.parseFloat(values[lengthIndex]) || 0
+      const width = Number.parseFloat(values[widthIndex]) || 0
+      const height = Number.parseFloat(values[heightIndex]) || 0
+
       const parcel: ParcelDimensions = {
-        weight: Number.parseFloat(values[weightIndex]) || 0,
-        length: Number.parseFloat(values[lengthIndex]) || 0,
-        width: Number.parseFloat(values[widthIndex]) || 0,
-        height: Number.parseFloat(values[heightIndex]) || 0,
+        weight,
+        length,
+        width,
+        height,
+        effectiveWeight: calculateEffectiveWeight({ weight, length, width, height }),
       }
 
       const recipient: RecipientDetails = {
@@ -170,6 +176,16 @@ export function CsvUploader({ setParcels, setRecipients, isValidDimensions }: Cs
     }
 
     return { parsedParcels, parsedRecipients }
+  }
+
+  const calculateEffectiveWeight = (parcel: {
+    weight: number
+    length: number
+    width: number
+    height: number
+  }): number => {
+    const volumetricWeight = (parcel.length * parcel.width * parcel.height) / 5000
+    return Math.max(parcel.weight, volumetricWeight)
   }
 
   const handleCsvButtonClick = () => {

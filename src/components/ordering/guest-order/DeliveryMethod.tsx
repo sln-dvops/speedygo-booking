@@ -1,5 +1,4 @@
 "use client"
-import Link from "next/link"
 import { Info } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -16,49 +15,66 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
-import type { DeliveryMethod, ParcelDimensions } from "@/types/pricing"
+import type { DeliveryMethod as DeliveryMethodType, ParcelDimensions } from "@/types/pricing"
 import { calculateShippingPrice } from "@/types/pricing"
 
+// Update the props type to include effectiveWeight and make selectedDimensions optional
 type DeliveryMethodProps = {
   onPrevStep: () => void
   onNextStep: () => void
-  selectedDimensions: ParcelDimensions
+  selectedDimensions?: ParcelDimensions[]
   isBulkOrder?: boolean
   totalParcels?: number
   totalWeight?: number
-  selectedDeliveryMethod: DeliveryMethod | undefined
-  setSelectedDeliveryMethod: (method: DeliveryMethod) => void
+  selectedDeliveryMethod: DeliveryMethodType | undefined
+  setSelectedDeliveryMethod: (method: DeliveryMethodType) => void
 }
 
 export function DeliveryMethod({
   onPrevStep,
   onNextStep,
-  selectedDimensions,
+  selectedDimensions = [],
   isBulkOrder = false,
   totalParcels = 1,
-  totalWeight = 0,
   selectedDeliveryMethod,
   setSelectedDeliveryMethod,
 }: DeliveryMethodProps) {
-  // Calculate base price for a single parcel
-  const basePrice = selectedDeliveryMethod ? calculateShippingPrice(selectedDimensions, selectedDeliveryMethod) : 0
+  // Calculate the total weight for display purposes
+  const calculatedTotalWeight = selectedDimensions.reduce((sum, parcel) => sum + parcel.weight, 0)
 
-  // Calculate bulk order price (no discount)
+  // Replace the existing calculateBulkPrice function with this one
   const calculateBulkPrice = () => {
     if (!selectedDeliveryMethod) return 0
 
-    // Base price for each parcel
-    const pricePerParcel = basePrice
-
-    // Multiply by number of parcels
-    if (isBulkOrder && totalParcels && totalParcels > 0) {
-      return pricePerParcel * totalParcels
-    }
-
-    return basePrice
+    return selectedDimensions.reduce((total, parcel) => {
+      const parcelPrice = calculateShippingPrice(parcel, selectedDeliveryMethod)
+      return total + parcelPrice
+    }, 0)
   }
 
-  const finalPrice = isBulkOrder ? calculateBulkPrice() : basePrice
+  const finalPrice = isBulkOrder
+    ? calculateBulkPrice()
+    : selectedDimensions.length > 0 && selectedDeliveryMethod
+      ? calculateShippingPrice(selectedDimensions[0], selectedDeliveryMethod)
+      : 0
+
+  if (selectedDimensions.length === 0) {
+    return (
+      <Card className="bg-white shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-black">Error</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-red-500">No parcel dimensions selected. Please go back and add parcel details.</p>
+        </CardContent>
+        <CardFooter className="px-6 py-4">
+          <Button variant="outline" onClick={onPrevStep} className="border-black text-black hover:bg-yellow-100">
+            Back
+          </Button>
+        </CardFooter>
+      </Card>
+    )
+  }
 
   return (
     <Card className="bg-white shadow-lg">
@@ -75,7 +91,7 @@ export function DeliveryMethod({
           <h3 className="font-medium text-lg text-black mb-4">Delivery Method</h3>
           <RadioGroup
             value={selectedDeliveryMethod || ""}
-            onValueChange={(value) => setSelectedDeliveryMethod(value as DeliveryMethod)}
+            onValueChange={(value) => setSelectedDeliveryMethod(value as DeliveryMethodType)}
             className="grid gap-4"
           >
             <Label
@@ -116,15 +132,15 @@ export function DeliveryMethod({
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>Total Parcels:</span>
-                <span>{totalParcels}</span>
+                <span>{selectedDimensions.length}</span>
               </div>
               <div className="flex justify-between">
                 <span>Total Weight:</span>
-                <span>{totalWeight?.toFixed(2)} kg</span>
+                <span>{calculatedTotalWeight.toFixed(2)} kg</span>
               </div>
               <div className="flex justify-between">
                 <span>Price Per Parcel:</span>
-                <span>${basePrice.toFixed(2)}</span>
+                <span>${(finalPrice / selectedDimensions.length).toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -137,26 +153,7 @@ export function DeliveryMethod({
         )}
 
         <div className="mt-6">
-          <h3 className="font-semibold text-lg mb-4 text-black">Send a parcel within 3 working days!</h3>
-          <ol className="list-decimal pl-5 space-y-2 mb-4 text-black">
-            <li>Submit mailing details and make payment below.</li>
-            <li>Print shipping label and attach it to your parcel.</li>
-            <li>
-              Drop your parcel off!
-              <Link href="#" className="text-black font-semibold ml-1 hover:underline">
-                Find your nearest Ninja Point
-              </Link>
-              .
-            </li>
-          </ol>
           <div className="text-gray-600">
-            <p>
-              Don&apos;t have a printer? Get our printed labels
-              <Link href="#" className="text-black font-semibold ml-1 hover:underline">
-                here
-              </Link>
-              .
-            </p>
             <div className="flex items-center mt-4">
               <span>Please ensure that your parcel meets our guidelines.</span>
               <Dialog>

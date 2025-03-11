@@ -181,7 +181,7 @@ export function OrderFlow() {
                   <DeliveryMethod
                     onPrevStep={handlePrevStep}
                     onNextStep={handleNextStep}
-                    selectedDimensions={selectedDimensions[0]}
+                    selectedDimensions={selectedDimensions}
                     isBulkOrder={orderType === "bulk"}
                     totalParcels={selectedDimensions.length}
                     totalWeight={selectedDimensions.reduce((sum, parcel) => sum + parcel.weight, 0)}
