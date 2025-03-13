@@ -5,7 +5,7 @@ import { useReactToPrint } from "react-to-print"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Printer, ChevronLeft, ChevronRight } from "lucide-react"
+import { Printer, ChevronLeft, ChevronRight, Package } from "lucide-react"
 import QRCode from "react-qr-code"
 import Barcode from "react-barcode"
 import type { OrderWithParcels, RecipientDetails } from "@/types/order"
@@ -15,10 +15,11 @@ interface WaybillProps {
   orderDetails: OrderWithParcels
 }
 
+// Fix the WaybillContentProps interface to make recipient optional
 interface WaybillContentProps {
   orderDetails: OrderWithParcels
   parcel: ParcelDimensions
-  recipient: RecipientDetails | null | undefined
+  recipient?: RecipientDetails | null | undefined
   waybillIndex?: number
 }
 
@@ -31,60 +32,42 @@ export function Waybill({ orderDetails }: WaybillProps) {
   const isBulkOrder = orderDetails.isBulkOrder && orderDetails.parcels.length > 1
   const totalWaybills = isBulkOrder ? orderDetails.parcels.length : 1
 
+  const printStyles = `
+  @page {
+    size: 100mm 150mm;
+    margin: 0;
+  }
+  @media print {
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    .waybill-content {
+      width: 100mm !important;
+      height: 150mm !important;
+      padding: 4mm !important;
+      box-sizing: border-box !important;
+      page-break-after: always !important;
+      transform: none !important;
+    }
+    .print-hidden {
+      display: none !important;
+    }
+  }
+`
+
   // Handle printing a single waybill with updated dimensions
   const handlePrintSingle = useReactToPrint({
     documentTitle: `Waybill-${orderDetails.orderNumber || ""}${isBulkOrder ? `-${currentWaybillIndex + 1}` : ""}`,
     contentRef: singleWaybillRef,
-    pageStyle: `
-    @page {
-      size: 100mm 150mm;
-      margin: 0;
-    }
-    @media print {
-      body {
-        margin: 0;
-        padding: 0;
-      }
-      .waybill-content {
-        width: 100mm;
-        height: 150mm;
-        padding: 5mm;
-        box-sizing: border-box;
-        page-break-after: always;
-      }
-      button, .tabs, .tab-list, .print-hidden {
-        display: none !important;
-      }
-    }
-  `,
+    pageStyle: printStyles,
   })
 
   // Handle printing all waybills with updated dimensions
   const handlePrintAll = useReactToPrint({
     documentTitle: `Waybills-${orderDetails.orderNumber || ""}`,
     contentRef: allWaybillsRef,
-    pageStyle: `
-    @page {
-      size: 100mm 150mm;
-      margin: 0;
-    }
-    @media print {
-      body {
-        margin: 0;
-        padding: 0;
-      }
-      .waybill-content {
-        width: 100mm;
-        height: 150mm;
-        padding: 5mm;
-        box-sizing: border-box;
-        page-break-after: always;
-      }
-      button, .tabs, .tab-list, .print-hidden {
-        display: none !important;
-      }
-    }
-  `,
+    pageStyle: printStyles,
   })
 
   const handlePrevWaybill = () => {
@@ -163,10 +146,17 @@ export function Waybill({ orderDetails }: WaybillProps) {
           )}
 
           {/* Current waybill preview */}
-          <div className="border border-gray-300 rounded-lg p-0 bg-white flex justify-center" ref={singleWaybillRef}>
+          <div className="border border-gray-300 rounded-lg p-4 bg-white flex justify-center" ref={singleWaybillRef}>
             <div
               className="waybill-preview"
-              style={{ width: "100mm", height: "150mm", padding: "5mm", border: "1px dashed #ccc" }}
+              style={{
+                width: "100mm",
+                height: "150mm",
+                transform: "scale(0.9)",
+                transformOrigin: "top center",
+                backgroundColor: "white",
+                border: "1px solid #e2e8f0",
+              }}
             >
               <WaybillContent
                 orderDetails={orderDetails}
@@ -193,7 +183,12 @@ export function Waybill({ orderDetails }: WaybillProps) {
                 ))
               ) : (
                 <div className="waybill-content">
-                  <WaybillContent orderDetails={orderDetails} parcel={orderDetails.parcels[0]} waybillIndex={0} />
+                  <WaybillContent
+                    orderDetails={orderDetails}
+                    parcel={orderDetails.parcels[0]}
+                    recipient={null}
+                    waybillIndex={0}
+                  />
                 </div>
               )}
             </div>
@@ -221,7 +216,7 @@ export function Waybill({ orderDetails }: WaybillProps) {
   )
 }
 
-// Update the WaybillContent component to be portrait-oriented and fit 150mm x 100mm
+// Update the WaybillContent component to be portrait-oriented and fit 100mm x 150mm
 function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: WaybillContentProps) {
   const isBulkOrder = orderDetails.isBulkOrder && orderDetails.parcels.length > 1
 
@@ -231,7 +226,6 @@ function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: W
     ? `${recipient.line1}, ${recipient.line2 || ""}, ${recipient.postalCode}, Singapore`
     : orderDetails.recipientAddress
   const recipientContact = recipient ? recipient.contactNumber : orderDetails.recipientContactNumber
-  const recipientEmail = recipient ? recipient.email : orderDetails.recipientEmail
 
   // Generate a unique tracking number for each parcel in a bulk order
   const trackingNumber = isBulkOrder
@@ -239,66 +233,94 @@ function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: W
     : orderDetails.orderNumber || "TEMP-ORDER"
 
   return (
-    <div className="waybill-content space-y-3 text-black text-sm" style={{ width: "100mm", height: "150mm" }}>
-      {/* Header with logo and waybill info */}
-      <div className="flex justify-between items-start border-b border-black pb-2">
-        <div>
-          <h2 className="text-base font-bold">Speedy Xpress</h2>
-          <p className="text-xs">Fast & Reliable Delivery</p>
+    <div className="relative bg-white" style={{ width: "100mm", height: "150mm", padding: "4mm" }}>
+      {/* Header */}
+      <div className="flex justify-between items-start mb-2">
+        <div className="flex items-center gap-2">
+          <Package className="h-6 w-6" />
+          <span className="text-lg font-bold">SPEEDY XPRESS</span>
         </div>
-        <div className="text-right">
-          <p className="font-bold text-xs">Waybill #{trackingNumber}</p>
-          <p className="text-xs">{new Date().toLocaleDateString()}</p>
-        </div>
+        <span className="text-3xl font-bold">T{waybillIndex + 1}</span>
       </div>
 
-      {/* From section */}
-      <div className="pt-1">
-        <h3 className="font-bold text-xs border-b border-gray-300 pb-1 mb-1">FROM:</h3>
-        <p className="font-medium text-xs">{orderDetails.senderName}</p>
-        <p className="text-xs">{orderDetails.senderAddress}</p>
-        <p className="text-xs">Contact: {orderDetails.senderContactNumber}</p>
-      </div>
-
-      {/* To section */}
-      <div className="pt-1">
-        <h3 className="font-bold text-xs border-b border-gray-300 pb-1 mb-1">TO:</h3>
-        <p className="font-medium text-xs">{recipientName}</p>
-        <p className="text-xs">{recipientAddress}</p>
-        <p className="text-xs">Contact: {recipientContact}</p>
-      </div>
-
-      {/* Parcel details */}
-      <div className="border-t border-b border-gray-300 py-2">
-        <h3 className="font-bold text-xs mb-1">PARCEL DETAILS:</h3>
-        <div className="grid grid-cols-2 gap-2">
+      {/* Seller Info */}
+      <div className="mb-2">
+        <div className="bg-black text-white px-2 py-0.5 text-xs font-bold">Seller info</div>
+        <div className="border border-t-0 border-black p-2 text-sm">
           <div>
-            <p className="text-xs">
-              <span className="font-medium">Weight:</span> {parcel.weight} kg
-            </p>
-            <p className="text-xs">
-              <span className="font-medium">Dimensions:</span> {parcel.length}×{parcel.width}×{parcel.height} cm
-            </p>
-            <p className="text-xs">
-              <span className="font-medium">Delivery:</span>{" "}
-              {orderDetails.deliveryMethod === "atl" ? "At Location" : "Hand-to-Hand"}
-            </p>
-            {isBulkOrder && (
-              <p className="text-xs">
-                <span className="font-medium">Parcel:</span> {waybillIndex + 1} of {orderDetails.parcels.length}
-              </p>
-            )}
+            <span className="font-bold">Name: </span>
+            {orderDetails.senderName}
           </div>
-
-          <div className="flex justify-end">
-            <QRCode value={trackingNumber} size={50} />
+          <div>
+            <span className="font-bold">Address: </span>
+            {orderDetails.senderAddress}
+          </div>
+          <div>
+            <span className="font-bold">Contact: </span>
+            {orderDetails.senderContactNumber}
           </div>
         </div>
       </div>
 
-      {/* Barcode */}
-      <div className="flex justify-center py-2">
-        <Barcode value={trackingNumber} width={1} height={30} fontSize={10} margin={0} />
+      {/* Buyer Info */}
+      <div className="mb-2">
+        <div className="bg-black text-white px-2 py-0.5 text-xs font-bold">Buyer info</div>
+        <div className="border border-t-0 border-black p-2 text-sm">
+          <div>
+            <span className="font-bold">Name: </span>
+            {recipientName}
+          </div>
+          <div>
+            <span className="font-bold">Address: </span>
+            {recipientAddress}
+          </div>
+          <div>
+            <span className="font-bold">Contact: </span>
+            {recipientContact}
+          </div>
+        </div>
+      </div>
+
+      {/* Item Table */}
+      <div className="mb-2">
+        <table className="w-full border-collapse text-sm">
+          <thead className="bg-black text-white">
+            <tr>
+              <th className="px-2 py-0.5 text-left text-xs font-bold">ITEM</th>
+              <th className="px-2 py-0.5 text-center w-16 text-xs font-bold">QTY</th>
+            </tr>
+          </thead>
+          <tbody className="border border-t-0 border-black">
+            <tr className="border-b border-black">
+              <td className="px-2 py-1">
+                {parcel.weight}kg • {parcel.length}×{parcel.width}×{parcel.height}cm
+              </td>
+              <td className="px-2 py-1 text-center">1</td>
+            </tr>
+            <tr>
+              <td className="px-2 py-1">
+                {orderDetails.deliveryMethod === "atl" ? "ATL Delivery" : "Hand-to-Hand Delivery"}
+              </td>
+              <td className="px-2 py-1 text-center">-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Footer with QR code and large ATL/HTH text */}
+      <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+        <QRCode value={trackingNumber} size={70} style={{ height: "auto", maxWidth: "100%", width: "70px" }} />
+        <div className="text-right">
+          <div className="text-5xl font-bold mb-1">{orderDetails.deliveryMethod === "atl" ? "ATL" : "HTH"}</div>
+          <Barcode
+            value={`SPDY${trackingNumber.slice(-5)}`}
+            width={1}
+            height={30}
+            fontSize={10}
+            margin={0}
+            textPosition="bottom"
+          />
+        </div>
       </div>
     </div>
   )

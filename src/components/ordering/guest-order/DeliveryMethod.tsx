@@ -1,6 +1,6 @@
 "use client"
 import { useState } from "react"
-import { Info, ChevronDown, ChevronUp, Package, DollarSign } from "lucide-react"
+import { Info, ChevronDown, ChevronUp, Package } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,7 +36,6 @@ export function DeliveryMethod({
   selectedDimensions = [],
   isBulkOrder = false,
   totalParcels = 1,
-  totalWeight,
   selectedDeliveryMethod,
   setSelectedDeliveryMethod,
 }: DeliveryMethodProps) {
@@ -249,10 +248,7 @@ export function DeliveryMethod({
           )}
           <div className="flex justify-between items-center mt-4 pt-2 border-t border-gray-300">
             <p className="text-xl font-semibold text-black">Total Price:</p>
-            <p className="text-2xl font-bold text-black flex items-center">
-              <DollarSign className="h-6 w-6 mr-1" />
-              {totalPrice.toFixed(2)}
-            </p>
+            <p className="text-2xl font-bold text-black">${totalPrice.toFixed(2)}</p>
           </div>
         </div>
 
@@ -272,10 +268,11 @@ export function DeliveryMethod({
                     <DialogDescription>Please ensure your parcel meets the following guidelines:</DialogDescription>
                   </DialogHeader>
                   <ul className="list-disc pl-5 mt-2 text-sm text-gray-600">
-                    <li>Maximum weight: 30kg</li>
+                    <li>Maximum weight: 30kg per parcel</li>
                     <li>Maximum dimensions: 150cm x 150cm x 150cm</li>
                     <li>No prohibited items (e.g., dangerous goods, perishables)</li>
                     <li>Properly packaged to prevent damage during transit</li>
+                    <li>Fragile items must be clearly marked with a fragile sticker.</li>
                     <li>Clear labeling with sender and recipient information</li>
                   </ul>
                 </DialogContent>
