@@ -1,8 +1,12 @@
 import { notFound } from "next/navigation"
 import { getOrderDetails } from "@/app/actions/ordering/guest-order/getOrderDetails"
-import { OrderDetails } from "@/components/ordering/guest-order/OrderDetails"
+import { OrderPageWrapper } from "@/components/ordering/OrderPageWrapper"
 
-export default async function OrderPage({ params }: { params: { orderId: string } }) {
+export default async function OrderPage({
+  params,
+}: {
+  params: Promise<{ orderId: string }>
+}) {
   const { orderId } = await params
 
   // Fetch order details from Supabase
@@ -18,7 +22,7 @@ export default async function OrderPage({ params }: { params: { orderId: string 
       <div className="container mx-auto max-w-5xl px-4">
         <h1 className="text-4xl font-extrabold tracking-tight text-black mb-8">Order Confirmation</h1>
         <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-          <OrderDetails orderId={orderId} initialOrderDetails={orderDetails} />
+          <OrderPageWrapper orderId={orderId} initialOrderDetails={orderDetails} />
         </div>
       </div>
     </div>

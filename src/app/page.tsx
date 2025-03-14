@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { OrderFlow } from "@/components/ordering/guest-order/OrderFlow"
+import { OrderFlow } from "@/components/ordering/OrderFlow"
 
 export const metadata: Metadata = {
   title: "Speedy Xpress: Create a delivery order",
