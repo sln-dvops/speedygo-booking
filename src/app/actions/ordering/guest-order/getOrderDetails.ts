@@ -41,6 +41,8 @@ export async function getOrderDetails(orderId: string): Promise<OrderWithParcels
       length: parcel.length,
       width: parcel.width,
       height: parcel.height,
+      effectiveWeight: Math.max(parcel.weight, (parcel.length * parcel.width * parcel.height) / 5000),
+      pricingTier: parcel.pricing_tier, // Include the pricing tier
     }))
 
     // Format recipient details for bulk orders
@@ -53,6 +55,7 @@ export async function getOrderDetails(orderId: string): Promise<OrderWithParcels
       line2: parcel.recipient_line2 || undefined,
       postalCode: parcel.recipient_postal_code,
       parcelIndex: index,
+      pricingTier: parcel.pricing_tier, // Include the pricing tier
     }))
 
     // Construct the response - use the first parcel's recipient details for individual orders

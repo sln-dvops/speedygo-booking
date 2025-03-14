@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js"
 import { createHitPayRequestBody, HITPAY_API_ENDPOINT } from "@/config/hitpay"
 import type { OrderDetails, HitPayResponse, RecipientDetails } from "@/types/order"
 import type { ParcelDimensions } from "@/types/pricing"
+import { determinePricingTier } from "@/types/pricing"
 
 // Create a Supabase client with the service role key for admin operations
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -117,6 +118,9 @@ export async function createOrder(
         throw new Error(`Missing recipient details for parcel ${i + 1}`)
       }
 
+      // Calculate the pricing tier for this parcel
+      const pricingTier = determinePricingTier(parcel)
+
       const parcelInsert = supabase.from("parcels").insert({
         order_id: orderId,
         bulk_order_id: bulkOrderId,
@@ -125,6 +129,7 @@ export async function createOrder(
         length: parcel.length,
         width: parcel.width,
         height: parcel.height,
+        pricing_tier: pricingTier, // Store the pricing tier
         recipient_name: recipientName,
         recipient_address: recipientAddress,
         recipient_contact_number: recipientContactNumber,
@@ -149,7 +154,7 @@ export async function createOrder(
 
     // Create HitPay payment request
     // Update the redirect URL to include the order ID
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://speedyxpress.vercel.app/"
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
     const redirectUrl = `${baseUrl}/order/${orderId}`
 
     const hitPayRequestBody = createHitPayRequestBody({
@@ -174,7 +179,8 @@ export async function createOrder(
     if (!hitPayResponse.ok) {
       const errorText = await hitPayResponse.text()
       console.error("HitPay API error response:", errorText)
-      throw new Error(`HitPay API error: ${hitPayResponse.status} ${hitPayResponse.statusText}\n${errorText}`)
+      throw new Error(`HitPay API error: ${hitPayResponse.status} ${hitPayResponse.statusText}
+${errorText}`)
     }
 
     const hitPayData: HitPayResponse = await hitPayResponse.json()

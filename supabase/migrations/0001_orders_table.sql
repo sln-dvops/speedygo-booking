@@ -34,6 +34,7 @@ CREATE TABLE public.parcels (
     length DECIMAL(10, 2) NOT NULL,
     width DECIMAL(10, 2) NOT NULL,
     height DECIMAL(10, 2) NOT NULL,
+    pricing_tier TEXT NOT NULL, -- Added pricing_tier column
     recipient_name TEXT NOT NULL,
     recipient_address TEXT NOT NULL,
     recipient_contact_number TEXT NOT NULL,

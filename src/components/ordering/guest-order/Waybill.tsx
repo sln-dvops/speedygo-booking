@@ -18,7 +18,7 @@ interface WaybillProps {
 // Fix the WaybillContentProps interface to make recipient optional
 interface WaybillContentProps {
   orderDetails: OrderWithParcels
-  parcel: ParcelDimensions
+  parcel: ParcelDimensions & { pricingTier?: string }
   recipient?: RecipientDetails | null | undefined
   waybillIndex?: number
 }
@@ -216,7 +216,8 @@ export function Waybill({ orderDetails }: WaybillProps) {
   )
 }
 
-// Update the WaybillContent component to be portrait-oriented and fit 100mm x 150mm
+// Update the WaybillContent component to use the pricing tier from the database
+// and maintain the layout as requested
 function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: WaybillContentProps) {
   const isBulkOrder = orderDetails.isBulkOrder && orderDetails.parcels.length > 1
 
@@ -232,6 +233,9 @@ function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: W
     ? `${orderDetails.orderNumber || ""}-${waybillIndex + 1}`
     : orderDetails.orderNumber || "TEMP-ORDER"
 
+  // Get the pricing tier from the parcel or recipient
+  const pricingTier = parcel.pricingTier || recipient?.pricingTier || "T1"
+
   return (
     <div className="relative bg-white" style={{ width: "100mm", height: "150mm", padding: "4mm" }}>
       {/* Header */}
@@ -240,7 +244,7 @@ function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: W
           <Package className="h-6 w-6" />
           <span className="text-lg font-bold">SPEEDY XPRESS</span>
         </div>
-        <span className="text-3xl font-bold">T{waybillIndex + 1}</span>
+        <span className="text-3xl font-bold">{pricingTier}</span>
       </div>
 
       {/* Seller Info */}
@@ -307,20 +311,32 @@ function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: W
         </table>
       </div>
 
-      {/* Footer with QR code and large ATL/HTH text */}
-      <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-        <QRCode value={trackingNumber} size={70} style={{ height: "auto", maxWidth: "100%", width: "70px" }} />
-        <div className="text-right">
-          <div className="text-5xl font-bold mb-1">{orderDetails.deliveryMethod === "atl" ? "ATL" : "HTH"}</div>
-          <Barcode
-            value={`SPDY${trackingNumber.slice(-5)}`}
-            width={1}
-            height={30}
-            fontSize={10}
-            margin={0}
-            textPosition="bottom"
-          />
+      {/* QR Code and Delivery Type Indicator side by side */}
+      <div className="flex justify-between items-center mt-4">
+        {/* QR Code on the left */}
+        <div>
+          <QRCode value={trackingNumber} size={85} style={{ height: "auto", maxWidth: "100%", width: "85px" }} />
         </div>
+
+        {/* Delivery Type Indicator on the right - Very large for elderly visibility */}
+        <div className="text-right">
+          <div className="text-8xl font-black" style={{ lineHeight: "0.9" }}>
+            {orderDetails.deliveryMethod === "atl" ? "ATL" : "HTH"}
+          </div>
+        </div>
+      </div>
+
+      {/* Barcode - Centered at bottom with proper spacing */}
+      <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+        <Barcode
+          value={`SPDY${trackingNumber.slice(-5)}`}
+          width={1.5}
+          height={35}
+          fontSize={10}
+          margin={0}
+          textPosition="bottom"
+          displayValue={true}
+        />
       </div>
     </div>
   )

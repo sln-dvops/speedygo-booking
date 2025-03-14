@@ -36,6 +36,7 @@ export interface RecipientDetails {
   line2?: string
   postalCode: string
   parcelIndex: number // To link recipient to specific parcel
+  pricingTier?: string // Added pricing tier
 }
 
 export type PartialOrderDetails = Partial<OrderDetails>
@@ -82,7 +83,7 @@ export interface HitPayResponse {
 }
 
 export interface OrderWithParcels extends OrderDetails {
-  parcels: ParcelDimensions[]
+  parcels: (ParcelDimensions & { pricingTier?: string })[]
   bulkOrder?: {
     id: string
     totalParcels: number

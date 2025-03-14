@@ -100,3 +100,27 @@ export function calculateVolumetricDensity(length: number, width: number, height
   return weight / volume // gives kg/cm³
 }
 
+/**
+ * Determine the pricing tier (T1, T2, T3, T4) based on parcel dimensions
+ */
+export function determinePricingTier(dimensions: ParcelDimensions): string {
+  const { weight, length, width, height } = dimensions
+
+  // Calculate volumetric weight
+  const volumetricWeight = (length * width * height) / 5000
+
+  // Use the higher of actual weight and volumetric weight
+  const effectiveWeight = Math.max(weight, volumetricWeight)
+
+  // Find applicable pricing tier
+  for (let i = 0; i < PRICING_TIERS.length; i++) {
+    const tier = PRICING_TIERS[i]
+    if (effectiveWeight <= tier.maxWeight && volumetricWeight <= tier.maxVolumetric) {
+      return `T${i + 1}` // T1, T2, T3, T4
+    }
+  }
+
+  // Default to highest tier if no match found
+  return `T${PRICING_TIERS.length}`
+}
+
