@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -14,6 +14,8 @@ import type { AddressFormData as BaseAddressFormData } from "@/components/orderi
 
 interface ExtendedAddressFormData extends BaseAddressFormData {
   recipients?: RecipientDetails[]
+  _componentType?: string
+  _inputMode?: string
 }
 
 type BulkSendToBaseProps = {
@@ -39,6 +41,13 @@ export function BulkSendToBase({
   title = "Recipient Details",
   description = "Please enter the delivery details for each parcel. Use the tabs below to navigate between parcels.",
 }: BulkSendToBaseProps) {
+  // Store the description in a ref to prevent it from changing
+  const descriptionRef = useRef(description)
+
+  // Store the active tab in a ref and state
+  const activeTabRef = useRef("parcel-1")
+  const [activeTab, setActiveTab] = useState("parcel-1")
+
   const [recipientAddresses, setRecipientAddresses] = useState<BaseAddressFormData[]>(() => {
     if (recipients.length > 0) {
       return recipients.map((recipient: RecipientDetails) => ({
@@ -62,9 +71,15 @@ export function BulkSendToBase({
     }
     return []
   })
-  const [activeTab, setActiveTab] = useState("parcel-1")
+
   const [validTabs, setValidTabs] = useState<string[]>([])
 
+  // Update the ref whenever activeTab changes
+  useEffect(() => {
+    activeTabRef.current = activeTab
+  }, [activeTab])
+
+  // Validate addresses and update valid tabs
   useEffect(() => {
     if (parcels && recipientAddresses.length > 0) {
       const newValidTabs: string[] = []
@@ -78,20 +93,30 @@ export function BulkSendToBase({
     }
   }, [parcels, recipientAddresses])
 
-  const handleAddressChange = (index: number, data: BaseAddressFormData) => {
-    // Store current active tab to prevent it from changing
-    const currentTab = activeTab
+  // Preserve active tab across renders
+  useEffect(() => {
+    // If we have a stored active tab, use it
+    if (activeTabRef.current && activeTabRef.current !== activeTab) {
+      setActiveTab(activeTabRef.current)
+    }
+  }, [activeTab])
 
+  const handleAddressChange = (index: number, data: BaseAddressFormData) => {
+    // Store current active tab
+    const currentTab = activeTab
+    activeTabRef.current = currentTab
+
+    // Update local state
     setRecipientAddresses((prevAddresses) => {
       const newAddresses = [...prevAddresses]
       newAddresses[index] = data
       return newAddresses
     })
 
-    // Create a new array only if necessary
+    // Create a copy of recipients
     const updatedRecipients = [...recipients]
 
-    // Ensure the recipient at this index exists
+    // Ensure recipient exists
     if (!updatedRecipients[index]) {
       updatedRecipients[index] = {
         name: "",
@@ -105,7 +130,7 @@ export function BulkSendToBase({
       }
     }
 
-    // Update only the specific recipient that changed
+    // Update only the changed recipient
     updatedRecipients[index] = {
       ...updatedRecipients[index],
       name: data.name,
@@ -118,16 +143,18 @@ export function BulkSendToBase({
       parcelIndex: index,
     }
 
-    // Update recipients first
+    // Update recipients
     updateRecipients(updatedRecipients)
 
-    // Then update form data
+    // Update form data with all metadata preserved
     updateFormData({
       ...formData,
       recipients: updatedRecipients,
+      _componentType: formData._componentType,
+      _inputMode: formData._inputMode,
     })
 
-    // Force the active tab to stay the same after state updates
+    // Force the active tab to stay the same after a short delay
     setTimeout(() => {
       setActiveTab(currentTab)
     }, 0)
@@ -149,14 +176,18 @@ export function BulkSendToBase({
   const handleNextParcel = () => {
     const currentIndex = Number.parseInt(activeTab.split("-")[1]) - 1
     if (currentIndex < (parcels?.length || 0) - 1) {
-      setActiveTab(`parcel-${currentIndex + 2}`)
+      const newTab = `parcel-${currentIndex + 2}`
+      setActiveTab(newTab)
+      activeTabRef.current = newTab
     }
   }
 
   const handlePrevParcel = () => {
     const currentIndex = Number.parseInt(activeTab.split("-")[1]) - 1
     if (currentIndex > 0) {
-      setActiveTab(`parcel-${currentIndex}`)
+      const newTab = `parcel-${currentIndex}`
+      setActiveTab(newTab)
+      activeTabRef.current = newTab
     }
   }
 
@@ -164,17 +195,13 @@ export function BulkSendToBase({
     updateFormData({
       ...formData,
       recipients: recipients,
+      _componentType: formData._componentType,
+      _inputMode: formData._inputMode,
     })
     onNextStep()
   }
 
   const allFormsValid = parcels && validTabs.length === parcels.length
-
-  useEffect(() => {
-    // This effect runs when recipients change
-    // We don't want to reset the active tab when recipients change
-    // so we do nothing here, just preventing any tab reset
-  }, [recipients])
 
   return (
     <Card className="bg-white shadow-lg">
@@ -190,10 +217,10 @@ export function BulkSendToBase({
         <div className="space-y-6">
           <div className="bg-yellow-100 p-4 rounded-lg mb-4">
             <h3 className="font-medium text-black mb-2">Multiple Recipients</h3>
-            <p className="text-sm text-gray-600">{description}</p>
+            <p className="text-sm text-gray-600">{descriptionRef.current}</p>
           </div>
 
-          <Tabs defaultValue="parcel-1" value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex justify-center w-full mb-6">
               <TabsList className="h-10 items-center bg-gray-100/80 p-1">
                 {parcels?.map((_, index) => {

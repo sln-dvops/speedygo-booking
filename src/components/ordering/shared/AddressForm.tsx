@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { validateSingaporeAddress, type ValidationResult } from "@/utils/addressValidation"
 
 export interface AddressFormData {
@@ -35,6 +35,7 @@ export function AddressForm({
 }: AddressFormProps) {
   const [formData, setFormData] = useState<AddressFormData>(initialData)
   const [validationResult, setValidationResult] = useState<ValidationResult>({ isValid: false, errors: {} })
+  const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // This effect will run when initialData changes, but we don't validate on initialization
   useEffect(() => {
@@ -44,16 +45,39 @@ export function AddressForm({
     }
   }, [initialData])
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (validationTimeoutRef.current) {
+        clearTimeout(validationTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     const updatedData = { ...formData, [name]: value }
+
+    // Always update local state immediately
     setFormData(updatedData)
+
+    // Always notify parent of data change
     onDataChange(updatedData)
 
-    // Only validate when user makes changes
-    const result = validateSingaporeAddress(updatedData)
-    setValidationResult(result)
-    onValidityChange(result.isValid)
+    // Clear any existing validation timeout
+    if (validationTimeoutRef.current) {
+      clearTimeout(validationTimeoutRef.current)
+    }
+
+    // Debounce validation, especially for contact number
+    validationTimeoutRef.current = setTimeout(
+      () => {
+        const result = validateSingaporeAddress(updatedData)
+        setValidationResult(result)
+        onValidityChange(result.isValid)
+      },
+      name === "contactNumber" ? 300 : 100,
+    )
   }
 
   return (

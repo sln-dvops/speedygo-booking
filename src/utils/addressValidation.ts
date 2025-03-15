@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { AddressFormData } from "@/components/ordering/guest-order/AddressForm"
+import type { AddressFormData } from "@/components/ordering/shared/AddressForm"
 
 // Singapore address validation schema
 export const singaporeAddressSchema = z.object({

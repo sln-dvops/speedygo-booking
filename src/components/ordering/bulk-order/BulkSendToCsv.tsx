@@ -27,12 +27,23 @@ export function BulkSendToCsv({
   recipients,
   updateRecipients,
 }: BulkSendToCsvProps) {
+  // Create a stable updateFormData function that won't cause component switching
+  const handleUpdateFormData = (data: ExtendedAddressFormData) => {
+    // Preserve the original component type to prevent switching
+    const updatedData = {
+      ...data,
+      // Add a flag to identify this as coming from the CSV component
+      _componentType: "csv",
+    }
+    updateFormData(updatedData)
+  }
+
   return (
     <BulkSendToBase
       onPrevStep={onPrevStep}
       onNextStep={onNextStep}
-      formData={formData}
-      updateFormData={updateFormData}
+      formData={{ ...formData, _componentType: "csv" }}
+      updateFormData={handleUpdateFormData}
       parcels={parcels}
       recipients={recipients}
       updateRecipients={updateRecipients}
