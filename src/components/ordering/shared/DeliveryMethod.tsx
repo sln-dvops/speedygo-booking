@@ -114,12 +114,17 @@ export function DeliveryMethod({
               }`}
             >
               <RadioGroupItem value="atl" className="sr-only" />
-              <div className="flex justify-between items-center">
+              <div className="grid grid-cols-[1fr,auto] gap-8 items-center">
                 <div>
                   <p className="font-medium text-black">Authorized to Leave (ATL)</p>
                   <p className="text-sm text-gray-600">Parcel will be left at a safe location</p>
                 </div>
-                <span className="text-black font-medium">Free</span>
+                <Badge
+                  variant="outline"
+                  className="border-2 border-black bg-yellow-100 text-black font-medium whitespace-nowrap"
+                >
+                  Free
+                </Badge>
               </div>
             </Label>
 
@@ -129,12 +134,17 @@ export function DeliveryMethod({
               }`}
             >
               <RadioGroupItem value="hand-to-hand" className="sr-only" />
-              <div className="flex justify-between items-center">
+              <div className="grid grid-cols-[1fr,auto] gap-8 items-center">
                 <div>
                   <p className="font-medium text-black">Hand to Hand</p>
                   <p className="text-sm text-gray-600">Parcel will be handed directly to recipient</p>
                 </div>
-                <span className="text-black font-medium">+${HAND_TO_HAND_FEE.toFixed(2)} per parcel</span>
+                <Badge
+                  variant="outline"
+                  className="border-2 border-black bg-yellow-100 text-black font-medium whitespace-nowrap"
+                >
+                  +${HAND_TO_HAND_FEE.toFixed(2)} per parcel
+                </Badge>
               </div>
             </Label>
           </RadioGroup>

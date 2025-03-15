@@ -41,14 +41,23 @@ export function Waybill({ orderDetails }: WaybillProps) {
     body {
       margin: 0;
       padding: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     .waybill-content {
       width: 100mm !important;
       height: 150mm !important;
-      padding: 4mm !important;
+      padding: 0 4mm 4mm 4mm !important;
+      margin: 0 !important;
       box-sizing: border-box !important;
+      border: none !important;
+      background: white !important;
+      box-sizing: border-box !important;
+      border: none !important;
+      background: white !important;
+    }
+    .bulk-waybill {
       page-break-after: always !important;
-      transform: none !important;
     }
     .print-hidden {
       display: none !important;
@@ -146,7 +155,7 @@ export function Waybill({ orderDetails }: WaybillProps) {
           )}
 
           {/* Current waybill preview */}
-          <div className="border border-gray-300 rounded-lg p-4 bg-white flex justify-center" ref={singleWaybillRef}>
+          <div className="border-none rounded-lg p-4 bg-white flex justify-center" ref={singleWaybillRef}>
             <div
               className="waybill-preview"
               style={{
@@ -155,7 +164,7 @@ export function Waybill({ orderDetails }: WaybillProps) {
                 transform: "scale(0.9)",
                 transformOrigin: "top center",
                 backgroundColor: "white",
-                border: "1px solid #e2e8f0",
+                border: "none",
               }}
             >
               <WaybillContent
@@ -172,7 +181,7 @@ export function Waybill({ orderDetails }: WaybillProps) {
             <div ref={allWaybillsRef}>
               {isBulkOrder ? (
                 orderDetails.parcels.map((parcel, index) => (
-                  <div key={index} className="waybill-content page-break-after">
+                  <div key={index} className="waybill-content bulk-waybill">
                     <WaybillContent
                       orderDetails={orderDetails}
                       parcel={parcel}
@@ -237,7 +246,17 @@ function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: W
   const pricingTier = parcel.pricingTier || recipient?.pricingTier || "T1"
 
   return (
-    <div className="relative bg-white" style={{ width: "100mm", height: "150mm", padding: "4mm" }}>
+    <div
+      className="relative bg-white"
+      style={{
+        width: "100mm",
+        height: "150mm",
+        padding: "0 4mm 4mm 4mm", // Remove top padding entirely
+        margin: "0",
+        boxSizing: "border-box",
+        border: "none",
+      }}
+    >
       {/* Header */}
       <div className="flex justify-between items-start mb-2">
         <div className="flex items-center gap-2">
@@ -327,7 +346,7 @@ function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: W
       </div>
 
       {/* Barcode - Centered at bottom with proper spacing */}
-      <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+      <div className="absolute bottom-12 left-0 right-0 flex justify-center" style={{ paddingBottom: 0 }}>
         <Barcode
           value={`SPDY${trackingNumber.slice(-5)}`}
           width={1.5}
