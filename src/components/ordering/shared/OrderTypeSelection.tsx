@@ -3,6 +3,7 @@
 import { Package, PackageIcon as Packages } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { OrderSearch } from "@/components/ordering/shared/OrderSearch"
 
 type OrderType = "individual" | "bulk"
 
@@ -59,15 +60,7 @@ export function OrderTypeSelection({ onNextStep }: OrderTypeSelectionProps) {
           </div>
         </div>
 
-        <div className="bg-yellow-100 p-4 rounded-lg">
-          <h4 className="font-medium text-black mb-2">Why choose bulk shipping?</h4>
-          <ul className="list-disc pl-5 text-gray-600 space-y-1">
-            <li>Send multiple parcels in a single order</li>
-            <li>Each parcel can have a different recipient address</li>
-            <li>Track all your shipments in one place</li>
-            <li>Simplified payment process - pay for all parcels at once</li>
-          </ul>
-        </div>
+        <OrderSearch />
       </CardContent>
     </Card>
   )

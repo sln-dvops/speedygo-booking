@@ -70,7 +70,7 @@ export function ParcelDimensions({
     })
   }
 
-  // Modify the handleAddParcel function
+  // Modify the handleAddParcel function to replace the existing parcel instead of adding a new one
   const handleAddParcel = () => {
     if (isValidDimensions(currentParcel)) {
       if (editingIndex !== null) {
@@ -141,6 +141,7 @@ export function ParcelDimensions({
     return parcels.reduce((total, parcel) => total + parcel.weight, 0)
   }
 
+  // Update the ParcelForm component to show different button text based on whether a parcel exists
   return (
     <Card className="bg-white shadow-lg">
       <CardHeader>
@@ -165,15 +166,17 @@ export function ParcelDimensions({
         </div>
 
         {/* Parcel Form Component */}
-        <ParcelForm
-          currentParcel={currentParcel}
-          handleDimensionChange={handleDimensionChange}
-          handleAddParcel={handleAddParcel}
-          isValidDimensions={isValidDimensions}
-          editingIndex={editingIndex}
-          volumetricWeight={volumetricWeight}
-          effectiveWeight={effectiveWeight}
-        />
+        {(parcels.length === 0 || editingIndex !== null) && (
+          <ParcelForm
+            currentParcel={currentParcel}
+            handleDimensionChange={handleDimensionChange}
+            handleAddParcel={handleAddParcel}
+            isValidDimensions={isValidDimensions}
+            editingIndex={editingIndex}
+            volumetricWeight={volumetricWeight}
+            effectiveWeight={effectiveWeight}
+          />
+        )}
 
         {/* Parcel List Component */}
         {parcels.length > 0 && (

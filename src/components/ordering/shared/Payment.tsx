@@ -10,6 +10,7 @@ import { createOrder } from "@/app/actions/ordering/guest-order/payment"
 import { calculateShippingPrice } from "@/types/pricing"
 import type { OrderDetails, PartialOrderDetails } from "@/types/order"
 import type { ParcelDimensions, DeliveryMethod } from "@/types/pricing"
+import { PaymentTerms } from "./PaymentTerms"
 
 type PaymentProps = {
   onPrevStep: () => void
@@ -156,6 +157,9 @@ export function Payment({
             cards, and other payment methods.
           </p>
         </div>
+
+        {/* Add PaymentTerms component here */}
+        <PaymentTerms />
 
         {error && (
           <div className="bg-red-100 border border-red-300 text-red-700 p-4 rounded-lg">
