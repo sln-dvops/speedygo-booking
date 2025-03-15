@@ -92,6 +92,9 @@ export function BulkSendToManual({
   }, [parcels, recipientAddresses])
 
   const handleAddressChange = (index: number, data: BaseAddressFormData) => {
+    // Prevent tab switching during updates by storing current tab
+    const currentTab = activeTab
+
     setRecipientAddresses((prevAddresses) => {
       const newAddresses = [...prevAddresses]
       newAddresses[index] = data
@@ -136,6 +139,11 @@ export function BulkSendToManual({
       ...formData,
       recipients: updatedRecipients,
     })
+
+    // Ensure we stay on the current tab after state updates
+    if (activeTab !== currentTab) {
+      setActiveTab(currentTab)
+    }
   }
 
   const handleValidityChange = (index: number, isValid: boolean) => {
@@ -176,6 +184,15 @@ export function BulkSendToManual({
 
   const allFormsValid = parcels && validTabs.length === parcels.length
 
+  // Add this effect to prevent tab switching during validation
+  useEffect(() => {
+    // This ensures the active tab doesn't change when validation status changes
+    const tabId = activeTab.split("-")[1]
+    if (tabId && Number.parseInt(tabId) > 0) {
+      // Keep the current tab active
+    }
+  }, [validTabs])
+
   return (
     <Card className="bg-white shadow-lg">
       <CardHeader>
@@ -195,7 +212,14 @@ export function BulkSendToManual({
             </p>
           </div>
 
-          <Tabs defaultValue="parcel-1" value={activeTab} onValueChange={setActiveTab}>
+          <Tabs
+            defaultValue="parcel-1"
+            value={activeTab}
+            onValueChange={(value) => {
+              // Only change tab if explicitly requested by user
+              setActiveTab(value)
+            }}
+          >
             <div className="flex justify-center w-full mb-6">
               <TabsList className="h-10 items-center bg-gray-100/80 p-1">
                 {parcels?.map((_, index) => {

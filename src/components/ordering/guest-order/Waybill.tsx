@@ -125,7 +125,7 @@ export function Waybill({ orderDetails }: WaybillProps) {
           )}
 
           {/* Current waybill preview */}
-          <div className="border-none rounded-lg p-4 bg-white flex justify-center" ref={singleWaybillRef}>
+          <div className="border-none rounded-lg p-4 bg-gray-100 flex justify-center" ref={singleWaybillRef}>
             <div
               className="waybill-preview"
               style={{
@@ -134,7 +134,8 @@ export function Waybill({ orderDetails }: WaybillProps) {
                 transform: "scale(0.9)",
                 transformOrigin: "top center",
                 backgroundColor: "white",
-                border: "none",
+                border: "1px solid #e5e7eb",
+                boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
               }}
             >
               <WaybillContent
