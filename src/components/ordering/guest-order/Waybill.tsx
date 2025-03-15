@@ -32,38 +32,8 @@ export function Waybill({ orderDetails }: WaybillProps) {
   const isBulkOrder = orderDetails.isBulkOrder && orderDetails.parcels.length > 1
   const totalWaybills = isBulkOrder ? orderDetails.parcels.length : 1
 
-  const printStyles = `
-  @page {
-    size: 100mm 150mm;
-    margin: 0;
-  }
-  @media print {
-    body {
-      margin: 0;
-      padding: 0;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    .waybill-content {
-      width: 100mm !important;
-      height: 150mm !important;
-      padding: 0 4mm 4mm 4mm !important;
-      margin: 0 !important;
-      box-sizing: border-box !important;
-      border: none !important;
-      background: white !important;
-      box-sizing: border-box !important;
-      border: none !important;
-      background: white !important;
-    }
-    .bulk-waybill {
-      page-break-after: always !important;
-    }
-    .print-hidden {
-      display: none !important;
-    }
-  }
-`
+  // Update the print styles to ensure consistency between preview and print
+  const printStyles = ``
 
   // Handle printing a single waybill with updated dimensions
   const handlePrintSingle = useReactToPrint({
@@ -181,23 +151,27 @@ export function Waybill({ orderDetails }: WaybillProps) {
             <div ref={allWaybillsRef}>
               {isBulkOrder ? (
                 orderDetails.parcels.map((parcel, index) => (
-                  <div key={index} className="waybill-content bulk-waybill">
-                    <WaybillContent
-                      orderDetails={orderDetails}
-                      parcel={parcel}
-                      recipient={orderDetails.recipients?.find((r) => r.parcelIndex === index)}
-                      waybillIndex={index}
-                    />
+                  <div key={index} className="waybill-content-wrapper">
+                    <div className="waybill-content">
+                      <WaybillContent
+                        orderDetails={orderDetails}
+                        parcel={parcel}
+                        recipient={orderDetails.recipients?.find((r) => r.parcelIndex === index)}
+                        waybillIndex={index}
+                      />
+                    </div>
                   </div>
                 ))
               ) : (
-                <div className="waybill-content">
-                  <WaybillContent
-                    orderDetails={orderDetails}
-                    parcel={orderDetails.parcels[0]}
-                    recipient={null}
-                    waybillIndex={0}
-                  />
+                <div className="waybill-content-wrapper">
+                  <div className="waybill-content">
+                    <WaybillContent
+                      orderDetails={orderDetails}
+                      parcel={orderDetails.parcels[0]}
+                      recipient={null}
+                      waybillIndex={0}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -251,14 +225,15 @@ function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: W
       style={{
         width: "100mm",
         height: "150mm",
-        padding: "0 4mm 4mm 4mm", // Remove top padding entirely
+        padding: "0 4mm 4mm 4mm",
         margin: "0",
         boxSizing: "border-box",
         border: "none",
+        overflow: "hidden", // Prevent content from being cut off
       }}
     >
       {/* Header */}
-      <div className="flex justify-between items-start mb-2">
+      <div className="flex justify-between items-start mb-2 w-full">
         <div className="flex items-center gap-2">
           <Package className="h-6 w-6" />
           <span className="text-lg font-bold">SPEEDY XPRESS</span>
@@ -267,18 +242,18 @@ function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: W
       </div>
 
       {/* Seller Info */}
-      <div className="mb-2">
-        <div className="bg-black text-white px-2 py-0.5 text-xs font-bold">Seller info</div>
-        <div className="border border-t-0 border-black p-2 text-sm">
-          <div>
+      <div className="mb-2 w-full">
+        <div className="bg-black text-white px-2 py-0.5 text-xs font-bold w-full">Seller info</div>
+        <div className="p-2 text-sm w-full" style={{ border: "1px solid black", borderTop: "none" }}>
+          <div className="truncate">
             <span className="font-bold">Name: </span>
             {orderDetails.senderName}
           </div>
-          <div>
+          <div className="truncate">
             <span className="font-bold">Address: </span>
             {orderDetails.senderAddress}
           </div>
-          <div>
+          <div className="truncate">
             <span className="font-bold">Contact: </span>
             {orderDetails.senderContactNumber}
           </div>
@@ -286,18 +261,18 @@ function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: W
       </div>
 
       {/* Buyer Info */}
-      <div className="mb-2">
-        <div className="bg-black text-white px-2 py-0.5 text-xs font-bold">Buyer info</div>
-        <div className="border border-t-0 border-black p-2 text-sm">
-          <div>
+      <div className="mb-2 w-full">
+        <div className="bg-black text-white px-2 py-0.5 text-xs font-bold w-full">Buyer info</div>
+        <div className="p-2 text-sm w-full" style={{ border: "1px solid black", borderTop: "none" }}>
+          <div className="truncate">
             <span className="font-bold">Name: </span>
             {recipientName}
           </div>
-          <div>
+          <div className="truncate">
             <span className="font-bold">Address: </span>
             {recipientAddress}
           </div>
-          <div>
+          <div className="truncate">
             <span className="font-bold">Contact: </span>
             {recipientContact}
           </div>
@@ -305,39 +280,50 @@ function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: W
       </div>
 
       {/* Item Table */}
-      <div className="mb-2">
-        <table className="w-full border-collapse text-sm">
-          <thead className="bg-black text-white">
+      <div className="mb-2 w-full" style={{ borderCollapse: "collapse" }}>
+        <table className="w-full table-fixed" style={{ borderCollapse: "collapse" }}>
+          <thead>
             <tr>
-              <th className="px-2 py-0.5 text-left text-xs font-bold">ITEM</th>
-              <th className="px-2 py-0.5 text-center w-16 text-xs font-bold">QTY</th>
+              <th
+                className="px-2 py-0.5 text-left text-xs font-bold bg-black text-white w-4/5"
+                style={{ border: "1px solid black" }}
+              >
+                ITEM
+              </th>
+              <th
+                className="px-2 py-0.5 text-center w-1/5 text-xs font-bold bg-black text-white"
+                style={{ border: "1px solid black" }}
+              >
+                QTY
+              </th>
             </tr>
           </thead>
-          <tbody className="border border-t-0 border-black">
-            <tr className="border-b border-black">
-              <td className="px-2 py-1">
+          <tbody>
+            <tr>
+              <td className="px-2 py-1 truncate" style={{ border: "1px solid black" }}>
                 {parcel.weight}kg • {parcel.length}×{parcel.width}×{parcel.height}cm
               </td>
-              <td className="px-2 py-1 text-center">1</td>
+              <td className="px-2 py-1 text-center" style={{ border: "1px solid black" }}>
+                1
+              </td>
             </tr>
             <tr>
-              <td className="px-2 py-1">
+              <td className="px-2 py-1" style={{ border: "1px solid black" }}>
                 {orderDetails.deliveryMethod === "atl" ? "ATL Delivery" : "Hand-to-Hand Delivery"}
               </td>
-              <td className="px-2 py-1 text-center">-</td>
+              <td className="px-2 py-1 text-center" style={{ border: "1px solid black" }}>
+                -
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
 
       {/* QR Code and Delivery Type Indicator side by side */}
-      <div className="flex justify-between items-center mt-4">
-        {/* QR Code on the left */}
+      <div className="flex justify-between items-center mt-4 w-full">
         <div>
           <QRCode value={trackingNumber} size={85} style={{ height: "auto", maxWidth: "100%", width: "85px" }} />
         </div>
-
-        {/* Delivery Type Indicator on the right - Very large for elderly visibility */}
         <div className="text-right">
           <div className="text-8xl font-black" style={{ lineHeight: "0.9" }}>
             {orderDetails.deliveryMethod === "atl" ? "ATL" : "HTH"}
@@ -346,7 +332,7 @@ function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: W
       </div>
 
       {/* Barcode - Centered at bottom with proper spacing */}
-      <div className="absolute bottom-12 left-0 right-0 flex justify-center" style={{ paddingBottom: 0 }}>
+      <div className="absolute bottom-12 left-0 right-0 flex justify-center w-full" style={{ paddingBottom: 0 }}>
         <Barcode
           value={`SPDY${trackingNumber.slice(-5)}`}
           width={1.5}

@@ -128,50 +128,59 @@
   }
 }
 
-/* Add page break styling for printing multiple waybills */
+/* Updated print styles to ensure consistent centering */
 @media print {
-  .page-break-after {
-    page-break-after: always;
+  @page {
+    size: 100mm 150mm;
+    margin: 0;
   }
 
-  /* Hide UI elements when printing */
-  button,
-  .tabs,
-  .tab-list,
-  .print-hidden {
-    display: none !important;
-  }
-
-  /* Ensure background colors and images print */
-  * {
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
     -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
     print-color-adjust: exact !important;
+    width: 100mm !important;
+    height: 150mm !important;
   }
 
-  /* Reset any transforms that might affect printing */
-  * {
+  .waybill-preview {
     transform: none !important;
   }
 
-  /* Ensure content is visible */
-  .bg-white {
-    background-color: white !important;
+  .waybill-content-wrapper {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    width: 100mm !important;
+    height: 150mm !important;
+    page-break-after: always !important;
+    page-break-inside: avoid !important;
   }
 
-  /* Specific waybill sizing */
   .waybill-content {
-    width: 100mm;
-    height: 150mm;
-    padding: 5mm;
-    box-sizing: border-box;
-    page-break-after: always;
-    font-size: 10pt;
+    width: 100mm !important;
+    height: 150mm !important;
+    padding: 0 4mm 4mm 4mm !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    border: none !important;
+    background: white !important;
+    position: relative !important;
+    overflow: visible !important;
   }
 
-  /* Ensure no margins or padding on body */
-  body {
-    margin: 0;
-    padding: 0;
+  .waybill-content > div {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .waybill-content table {
+    font-size: 12px !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-hidden {
+    display: none !important;
   }
 }
