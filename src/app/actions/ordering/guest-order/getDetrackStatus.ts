@@ -37,7 +37,8 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
       return null
     }
 
-    // If no Detrack ID, return basic status
+    // If order is not yet in Detrack (we're still storing detrack_id as a flag),
+    // return basic status
     if (!orderData.detrack_id) {
       return {
         status: "processing",
@@ -78,9 +79,10 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
       return null
     }
 
-    // 2. Fetch the delivery status from Detrack - use the correct URL format
-    // The full URL should be provided in the environment variable, so we just append the ID
-    const apiUrl = `${detrackConfig.apiUrl}/${orderData.detrack_id}`
+    // 2. Fetch the delivery status from Detrack using the DO number (which is our order ID)
+    // According to Detrack API docs, we should use the DO number, not the Detrack ID
+    const baseUrl = detrackConfig.apiUrl
+    const apiUrl = `${baseUrl}/${orderId}` // Use the order ID as the DO number
     console.log(`Fetching Detrack status from: ${apiUrl}`)
 
     const response = await fetch(apiUrl, {

@@ -149,6 +149,7 @@ export async function createDetrackOrder(
     }
 
     // 7. Convert our order to Detrack job format
+    // Note: We use the order ID as the DO number in Detrack, which is what we'll use to fetch status later
     const detrackJob: DetrackJob = convertOrderToDetrackJob(order)
 
     // 8. Send the job to Detrack API
@@ -226,7 +227,8 @@ export async function createDetrackOrder(
       // Wait for all parcel updates to complete
       await Promise.all(updatePromises)
 
-      // 11. Update the order with the Detrack ID
+      // 11. Update the order with the Detrack ID (we store this as a flag to indicate the order exists in Detrack)
+      // Note: For status retrieval, we'll use the order ID (DO number), not this Detrack ID
       const { error: updateError } = await supabase.from("orders").update({ detrack_id: detrackId }).eq("id", orderId)
 
       if (updateError) {

@@ -23,6 +23,7 @@ export function convertOrderToDetrackJob(order: OrderWithParcels): DetrackJob {
   // Basic job data
   const job: DetrackJob = {
     type: DetrackJobType.DELIVERY,
+    // Use our order number as the DO number - this is the key identifier for retrieving status later
     do_number: order.orderNumber || "",
     date: new Date().toISOString().split("T")[0], // Today's date in YYYY-MM-DD format
     address: order.recipientAddress,
