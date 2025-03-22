@@ -43,9 +43,21 @@ export function convertOrderToDetrackJob(order: OrderWithParcels): DetrackJob {
     postal_code: order.recipientPostalCode,
     country: "Singapore", // Default to Singapore
 
-    // Sender details
+    // Sender details - using pick_up fields
     pick_up_from: order.senderName,
     pick_up_address: order.senderAddress,
+    pick_up_contact: order.senderContactNumber,
+    pick_up_email: order.senderEmail,
+
+    // Seller/Shipper details - trying different field combinations
+    sender_name: order.senderName,
+    sender_address: order.senderAddress,
+    sender_phone_number: order.senderContactNumber,
+    company_name: order.senderName,
+
+    // Also try these fields as they appear in the API docs
+    vendor_name: order.senderName,
+    shipper_name: order.senderName,
 
     // Parcel details
     weight: firstParcel.weight,

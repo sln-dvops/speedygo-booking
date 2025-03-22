@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation"
 import { getOrderDetails } from "@/app/actions/ordering/guest-order/getOrderDetails"
 import { OrderPageWrapper } from "@/components/ordering/OrderPageWrapper"
-import { DetrackStatusTracker } from "@/components/ordering/shared/DetrackStatusTracker"
 
 export default async function OrderPage({
   params,
@@ -25,13 +24,6 @@ export default async function OrderPage({
         <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
           <OrderPageWrapper orderId={orderId} initialOrderDetails={orderDetails} />
         </div>
-
-        {/* Add the DetrackStatusTracker component */}
-        {orderDetails.status === "paid" && (
-          <div className="mt-8">
-            <DetrackStatusTracker orderId={orderId} />
-          </div>
-        )}
       </div>
     </div>
   )

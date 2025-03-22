@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { getDetrackStatus, type DetrackStatusResponse } from "@/app/actions/ordering/guest-order/getDetrackStatus"
 import { CheckCircle, Clock, Package, Truck, RefreshCw, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,7 @@ export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
   const [error, setError] = useState<string | null>(null)
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date())
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -31,7 +31,7 @@ export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [orderId])
 
   useEffect(() => {
     fetchStatus()
@@ -42,7 +42,7 @@ export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
     }, 30000)
 
     return () => clearInterval(interval)
-  }, [orderId])
+  }, [fetchStatus])
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -77,17 +77,6 @@ export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
         return "bg-red-100 text-red-800 border-red-200"
       default:
         return "bg-gray-100 text-gray-800 border-gray-200"
-    }
-  }
-
-  const getMilestoneIcon = (status: "completed" | "current" | "upcoming") => {
-    switch (status) {
-      case "completed":
-        return <div className="absolute left-0 -ml-2 h-4 w-4 rounded-full bg-green-500 ring-2 ring-white" />
-      case "current":
-        return <div className="absolute left-0 -ml-2 h-4 w-4 rounded-full bg-blue-500 ring-2 ring-white" />
-      case "upcoming":
-        return <div className="absolute left-0 -ml-2 h-4 w-4 rounded-full bg-gray-300 ring-2 ring-white" />
     }
   }
 
@@ -168,7 +157,17 @@ export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
             <div className="relative pl-6 border-l-2 border-gray-200 space-y-6">
               {status.milestones.map((milestone, index) => (
                 <div key={index} className="relative pb-6">
-                  {getMilestoneIcon(milestone.status)}
+                  <div
+                    className="absolute left-0 top-1.5 -ml-2 h-4 w-4 rounded-full ring-2 ring-white"
+                    style={{
+                      backgroundColor:
+                        milestone.status === "completed"
+                          ? "#10b981"
+                          : milestone.status === "current"
+                            ? "#3b82f6"
+                            : "#d1d5db",
+                    }}
+                  />
                   <div className="ml-6">
                     <h4 className="font-medium text-gray-900">{milestone.name}</h4>
                     <p className="text-sm text-gray-500">{milestone.description}</p>

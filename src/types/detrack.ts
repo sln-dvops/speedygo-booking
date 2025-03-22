@@ -77,6 +77,16 @@ export interface DetrackJob {
   pick_up_from?: string
   pick_up_address?: string
   pick_up_postal_code?: string
+  pick_up_contact?: string
+  pick_up_email?: string
+
+  // Seller/Shipper details (trying different field combinations)
+  vendor_name?: string
+  shipper_name?: string
+  sender_phone_number?: string
+  sender_name?: string
+  sender_address?: string
+  company_name?: string
 
   // Parcel details
   weight?: number
