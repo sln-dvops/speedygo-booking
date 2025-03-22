@@ -43,7 +43,8 @@ CREATE TABLE public.parcels (
     recipient_line2 TEXT,
     recipient_postal_code TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    detrack_item_id TEXT
 );
 
 -- Add indexes for better query performance
@@ -51,4 +52,4 @@ CREATE INDEX idx_parcels_order_id ON public.parcels(order_id);
 CREATE INDEX idx_parcels_bulk_order_id ON public.parcels(bulk_order_id);
 CREATE INDEX idx_bulk_orders_order_id ON public.bulk_orders(order_id);
 CREATE INDEX idx_orders_status ON public.orders(status);
-
+CREATE INDEX idx_parcels_detrack_item_id ON public.parcels(detrack_item_id);

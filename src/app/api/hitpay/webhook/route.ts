@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 import { createClient } from "@/utils/supabase/server"
+import { createDetrackOrder } from "@/app/actions/ordering/guest-order/createDetrackOrder"
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,6 +66,20 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`Updated order ${reference_number} status to ${orderStatus}`)
+
+    // If payment is successful, create a Detrack order
+    if (orderStatus === "paid") {
+      console.log(`Payment successful for order ${reference_number}, creating Detrack order`)
+
+      // Create Detrack order asynchronously to avoid blocking the webhook response
+      createDetrackOrder(reference_number)
+        .then((result) => {
+          console.log(`Detrack order creation result:`, result)
+        })
+        .catch((error) => {
+          console.error(`Error creating Detrack order:`, error)
+        })
+    }
 
     // Return a 200 response to acknowledge receipt of the webhook
     return NextResponse.json({ success: true })

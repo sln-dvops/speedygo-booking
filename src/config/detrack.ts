@@ -9,7 +9,7 @@ import type { OrderWithParcels } from "@/types/order"
  */
 export const detrackConfig: DetrackConfig = {
   apiKey: process.env.DETRACK_API_KEY || "",
-  baseUrl: "https://app.detrack.com/api/v2",
+  apiUrl: process.env.DETRACK_API_URL || "",
   webhookSecret: process.env.DETRACK_WEBHOOK_SECRET,
 }
 
@@ -75,13 +75,6 @@ export function convertOrderToDetrackJob(order: OrderWithParcels): DetrackJob {
   }
 
   return job
-}
-
-/**
- * Creates a Detrack API request URL
- */
-export function createDetrackApiUrl(endpoint: string): string {
-  return `${detrackConfig.baseUrl}/${endpoint}`
 }
 
 /**

@@ -1,0 +1,196 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { getDetrackStatus, type DetrackStatusResponse } from "@/app/actions/ordering/guest-order/getDetrackStatus"
+import { CheckCircle, Clock, Package, Truck, RefreshCw, AlertCircle } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+
+export interface DetrackStatusTrackerProps {
+  orderId: string
+}
+
+export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
+  const [status, setStatus] = useState<DetrackStatusResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date())
+
+  const fetchStatus = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await getDetrackStatus(orderId)
+      setStatus(data)
+      setLastRefreshed(new Date())
+    } catch (err) {
+      setError("Failed to load tracking information. Please try again later.")
+      console.error("Error fetching tracking status:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchStatus()
+
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchStatus()
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [orderId])
+
+  const getStatusIcon = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "completed":
+        return <CheckCircle className="h-5 w-5 text-green-500" />
+      case "out for delivery":
+        return <Truck className="h-5 w-5 text-blue-500" />
+      case "in_progress":
+      case "in progress":
+        return <Truck className="h-5 w-5 text-blue-500" />
+      case "pending":
+        return <Clock className="h-5 w-5 text-yellow-500" />
+      case "failed":
+        return <AlertCircle className="h-5 w-5 text-red-500" />
+      default:
+        return <Package className="h-5 w-5 text-gray-500" />
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "completed":
+        return "bg-green-100 text-green-800 border-green-200"
+      case "out for delivery":
+        return "bg-blue-100 text-blue-800 border-blue-200"
+      case "in_progress":
+      case "in progress":
+        return "bg-blue-100 text-blue-800 border-blue-200"
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200"
+      case "failed":
+        return "bg-red-100 text-red-800 border-red-200"
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200"
+    }
+  }
+
+  const getMilestoneIcon = (status: "completed" | "current" | "upcoming") => {
+    switch (status) {
+      case "completed":
+        return <div className="absolute left-0 -ml-2 h-4 w-4 rounded-full bg-green-500 ring-2 ring-white" />
+      case "current":
+        return <div className="absolute left-0 -ml-2 h-4 w-4 rounded-full bg-blue-500 ring-2 ring-white" />
+      case "upcoming":
+        return <div className="absolute left-0 -ml-2 h-4 w-4 rounded-full bg-gray-300 ring-2 ring-white" />
+    }
+  }
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "Pending"
+    const date = new Date(dateString)
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    })
+  }
+
+  const formatLastRefreshed = (date: Date) => {
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    })
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Delivery Status</CardTitle>
+          <CardDescription>Tracking information for your order</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-6">
+            <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button onClick={fetchStatus} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle>Delivery Status</CardTitle>
+            <CardDescription>Tracking information for your order</CardDescription>
+          </div>
+          <Button onClick={fetchStatus} variant="outline" size="sm" disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loading && !status ? (
+          <div className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ) : status ? (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                {getStatusIcon(status.status)}
+                <div>
+                  <Badge className={getStatusColor(status.status)}>{status.trackingStatus}</Badge>
+                </div>
+              </div>
+              <div className="text-xs text-gray-500">Last updated: {formatDate(status.lastUpdated)}</div>
+            </div>
+
+            <div className="relative pl-6 border-l-2 border-gray-200 space-y-6">
+              {status.milestones.map((milestone, index) => (
+                <div key={index} className="relative pb-6">
+                  {getMilestoneIcon(milestone.status)}
+                  <div className="ml-6">
+                    <h4 className="font-medium text-gray-900">{milestone.name}</h4>
+                    <p className="text-sm text-gray-500">{milestone.description}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {milestone.timestamp ? formatDate(milestone.timestamp) : "Pending"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-xs text-gray-500 text-right">Last refreshed: {formatLastRefreshed(lastRefreshed)}</div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-6">
+            <Package className="h-10 w-10 text-gray-400 mb-4" />
+            <p className="text-gray-500 mb-2">No tracking information available yet</p>
+            <p className="text-xs text-gray-400">Tracking details will appear here once your order is processed</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
