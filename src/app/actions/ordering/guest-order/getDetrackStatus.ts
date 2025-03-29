@@ -40,6 +40,11 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
     // If order is not yet in Detrack (we're still storing detrack_id as a flag),
     // return basic status
     if (!orderData.detrack_id) {
+      // Use Singapore time for timestamps
+      const now = new Date()
+      // Format in ISO string but ensure it's in Singapore time (UTC+8)
+      const sgTime = new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString()
+
       return {
         status: "processing",
         trackingStatus: "Order received",
@@ -47,7 +52,7 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
           {
             name: "Order Received",
             status: "completed",
-            timestamp: new Date().toISOString(),
+            timestamp: sgTime,
             description: "Your order has been received and is being processed",
           },
           {
@@ -69,7 +74,7 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
             description: "Your order will be delivered soon",
           },
         ],
-        lastUpdated: new Date().toISOString(),
+        lastUpdated: sgTime,
       }
     }
 

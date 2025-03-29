@@ -53,6 +53,7 @@ export interface DetrackJob {
   type: DetrackJobType
   do_number: string
   date: string
+  start_date?: string
   address: string
 
   // Order details
@@ -80,13 +81,17 @@ export interface DetrackJob {
   pick_up_contact?: string
   pick_up_email?: string
 
-  // Seller/Shipper details (trying different field combinations)
-  vendor_name?: string
-  shipper_name?: string
-  sender_phone_number?: string
+  // Seller/Shipper details
   sender_name?: string
+  sender_phone_number?: string
+
+  // Try different variations for sender address
   sender_address?: string
-  company_name?: string
+  sender_address_1?: string
+  sender_address_line_1?: string
+  shipper_address?: string
+  vendor_address?: string
+  from_address?: string
 
   // Parcel details
   weight?: number

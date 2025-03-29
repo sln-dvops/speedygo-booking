@@ -80,24 +80,30 @@ export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
     }
   }
 
+  // Format date in Singapore time (UTC+8)
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Pending"
+
+    // Create date object and format in Singapore time
     const date = new Date(dateString)
-    return date.toLocaleString("en-US", {
-      month: "short",
+    return new Intl.DateTimeFormat("en-SG", {
+      timeZone: "Asia/Singapore",
       day: "numeric",
+      month: "short",
       hour: "numeric",
       minute: "numeric",
       hour12: true,
-    })
+    }).format(date)
   }
 
+  // Format time in Singapore time (UTC+8)
   const formatLastRefreshed = (date: Date) => {
-    return date.toLocaleTimeString("en-US", {
+    return new Intl.DateTimeFormat("en-SG", {
+      timeZone: "Asia/Singapore",
       hour: "numeric",
       minute: "numeric",
       hour12: true,
-    })
+    }).format(date)
   }
 
   if (error) {

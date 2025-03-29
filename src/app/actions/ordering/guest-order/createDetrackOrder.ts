@@ -152,6 +152,15 @@ export async function createDetrackOrder(
     // Note: We use the order ID as the DO number in Detrack, which is what we'll use to fetch status later
     const detrackJob: DetrackJob = convertOrderToDetrackJob(order)
 
+    // Set the date to Singapore time (UTC+8)
+    const now = new Date()
+    const sgDate = new Date(now.getTime() + 8 * 60 * 60 * 1000)
+    const formattedDate = sgDate.toISOString().split("T")[0] // YYYY-MM-DD format
+
+    // Set the date in the job to Singapore time
+    detrackJob.date = formattedDate
+    detrackJob.start_date = formattedDate
+
     // 8. Send the job to Detrack API
     console.log("Sending job to Detrack:", JSON.stringify(detrackJob, null, 2))
 

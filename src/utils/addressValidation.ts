@@ -4,7 +4,9 @@ import type { AddressFormData } from "@/components/ordering/shared/AddressForm"
 // Singapore address validation schema
 export const singaporeAddressSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  contactNumber: z.string().regex(/^[89]\d{7}$/, "Singapore phone numbers should start with 8 or 9 and have 8 digits"),
+  contactNumber: z
+    .string()
+    .regex(/^[0-9+\-\s]{1,30}$/, "Phone number can contain only digits, +, -, and spaces (max 30 characters)"),
   email: z.string().email("Please enter a valid email address"),
   street: z.string().min(3, "Street address must be at least 3 characters"),
   unitNo: z
