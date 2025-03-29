@@ -146,8 +146,8 @@ export function WaybillContent({ orderDetails, parcel, recipient, waybillIndex =
         </div>
       </div>
 
-      {/* Barcode - Centered at bottom with proper spacing */}
-      <div className="absolute bottom-8 left-0 right-0 flex justify-center w-full">
+      {/* Barcode - Positioned at the very bottom with clear separation */}
+      <div className="absolute left-0 right-0 flex justify-center w-full" style={{ bottom: "4mm" }}>
         <Barcode
           value={`SPDY${trackingNumber.slice(-5)}`}
           width={1.5}
