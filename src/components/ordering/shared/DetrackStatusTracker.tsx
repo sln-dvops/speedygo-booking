@@ -57,6 +57,8 @@ export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
         return <Clock className="h-5 w-5 text-yellow-500" />
       case "failed":
         return <AlertCircle className="h-5 w-5 text-red-500" />
+      case "detrack_missing":
+        return <AlertCircle className="h-5 w-5 text-orange-500" />
       default:
         return <Package className="h-5 w-5 text-gray-500" />
     }
@@ -75,6 +77,8 @@ export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
         return "bg-yellow-100 text-yellow-800 border-yellow-200"
       case "failed":
         return "bg-red-100 text-red-800 border-red-200"
+      case "detrack_missing":
+        return "bg-orange-100 text-orange-800 border-orange-200"
       default:
         return "bg-gray-100 text-gray-800 border-gray-200"
     }
@@ -159,6 +163,22 @@ export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
               </div>
               <div className="text-xs text-gray-500">Last updated: {formatDate(status.lastUpdated)}</div>
             </div>
+
+            {status.status === "detrack_missing" && (
+              <div className="bg-orange-50 border border-orange-200 rounded-md p-3 mb-2">
+                <div className="flex items-start">
+                  <AlertCircle className="h-5 w-5 text-orange-500 mr-2 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-orange-800">Tracking ID Not Created</p>
+                    <p className="text-xs text-orange-700 mt-1">
+                      Your order has been received, but the tracking ID has not been created yet. This is usually
+                      resolved automatically. If this persists for more than 30 minutes, please contact customer
+                      support.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="relative pl-6 border-l-2 border-gray-200 space-y-6">
               {status.milestones.map((milestone, index) => (

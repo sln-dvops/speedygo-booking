@@ -36,12 +36,15 @@ export function OrderDetails({ orderId, initialOrderDetails }: OrderDetailsProps
 
   // Check status on initial load and set up polling
   useEffect(() => {
-    if (status !== "paid") {
-      refreshOrderStatus()
-
-      const interval = setInterval(refreshOrderStatus, 3000) // Check every 3 seconds
-      return () => clearInterval(interval)
+    // Immediately stop polling if status is paid
+    if (status === "paid") {
+      return
     }
+
+    refreshOrderStatus()
+
+    const interval = setInterval(refreshOrderStatus, 3000) // Check every 3 seconds
+    return () => clearInterval(interval)
   }, [status, orderId])
 
   return (

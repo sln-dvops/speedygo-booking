@@ -16,9 +16,11 @@ export interface DetrackStatusResponse {
 }
 
 export async function getDetrackStatus(orderId: string): Promise<DetrackStatusResponse | null> {
+  console.log(`getDetrackStatus called for order ID: ${orderId}`)
   try {
     // Initialize Supabase client
     const supabase = await createClient()
+    console.log(`Supabase client initialized for order ID: ${orderId}`)
 
     // 1. Fetch the order to get the Detrack ID
     const { data: orderData, error: orderError } = await supabase
@@ -27,6 +29,11 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
       .eq("id", orderId)
       .single()
 
+    console.log(`Order data fetched for ${orderId}:`, orderData)
+    if (orderError) {
+      console.error(`Error fetching order ${orderId}:`, orderError)
+    }
+
     if (orderError || !orderData) {
       console.error("Error fetching order:", orderError)
       return null
@@ -34,20 +41,22 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
 
     // If order is not paid yet, return null
     if (orderData.status !== "paid") {
+      console.log(`Order ${orderId} is not paid yet (status: ${orderData.status}), returning null`)
       return null
     }
 
     // If order is not yet in Detrack (we're still storing detrack_id as a flag),
-    // return basic status
+    // return custom status indicating the issue
     if (!orderData.detrack_id) {
+      console.log(`Order ${orderId} does not have a Detrack ID yet, returning custom error status`)
       // Use Singapore time for timestamps
       const now = new Date()
       // Format in ISO string but ensure it's in Singapore time (UTC+8)
       const sgTime = new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString()
 
       return {
-        status: "processing",
-        trackingStatus: "Order received",
+        status: "detrack_missing",
+        trackingStatus: "Tracking ID Missing",
         milestones: [
           {
             name: "Order Received",
@@ -56,10 +65,10 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
             description: "Your order has been received and is being processed",
           },
           {
-            name: "Preparing for Shipment",
+            name: "Tracking Setup",
             status: "current",
             timestamp: null,
-            description: "Your order is being prepared for shipment",
+            description: "Waiting for tracking ID to be assigned",
           },
           {
             name: "Out for Delivery",
@@ -96,18 +105,24 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
       next: { revalidate: 60 }, // Cache for 1 minute
     })
 
+    console.log(`Detrack API response status for ${orderId}: ${response.status} ${response.statusText}`)
+
     if (!response.ok) {
       console.error(`Detrack API error: ${response.status} ${response.statusText}`)
       return null
     }
 
     const detrackResponse = await response.json()
+    console.log(`Detrack API response for order ${orderId}:`, JSON.stringify(detrackResponse, null, 2))
+
     const detrackData = detrackResponse.data
 
     if (!detrackData) {
       console.error("No data returned from Detrack API")
       return null
     }
+
+    console.log(`Detrack data for order ${orderId}:`, JSON.stringify(detrackData, null, 2))
 
     // 3. Map Detrack status to our format
     const milestones: Array<{

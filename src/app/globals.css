@@ -129,7 +129,7 @@
 }
 
 /* Updated print styles to ensure consistent centering */
-@media print {
+/* @media print {
   @page {
     size: 100mm 150mm;
     margin: 0;
@@ -183,4 +183,4 @@
   .print-hidden {
     display: none !important;
   }
-}
+} */
