@@ -52,7 +52,7 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
       // Use Singapore time for timestamps
       const now = new Date()
       // Format in ISO string but ensure it's in Singapore time (UTC+8)
-      const sgTime = new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString()
+      const sgTime = new Date(now.getTime()).toISOString()
 
       return {
         status: "detrack_missing",
@@ -170,11 +170,15 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
       }
     }
 
+    // Use current time for lastUpdated instead of relying on Detrack's updated_at
+    // This ensures the time is consistent with our system
+    const now = new Date().toISOString()
+
     return {
       status: detrackData.status || "processing",
       trackingStatus: detrackData.tracking_status || "Order received",
       milestones,
-      lastUpdated: detrackData.updated_at || new Date().toISOString(),
+      lastUpdated: now,
     }
   } catch (error) {
     console.error("Error fetching Detrack status:", error)
