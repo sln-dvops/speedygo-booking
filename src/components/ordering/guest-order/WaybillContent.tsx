@@ -1,6 +1,6 @@
 "use client"
 
-import { Package } from "lucide-react"
+import { Package } from 'lucide-react'
 import QRCode from "react-qr-code"
 import Barcode from "react-barcode"
 import type { OrderWithParcels, RecipientDetails } from "@/types/order"
@@ -18,9 +18,12 @@ export function WaybillContent({ orderDetails, parcel, recipient}: WaybillConten
 
   // For bulk orders, use the recipient details if available
   const recipientName = recipient ? recipient.name : orderDetails.recipientName
+  
+  // Update address format to "Singapore {postal code}"
   const recipientAddress = recipient
-    ? `${recipient.line1}, ${recipient.line2 || ""}, ${recipient.postalCode}, Singapore`
+    ? `${recipient.line1}, ${recipient.line2 || ""}, Singapore ${recipient.postalCode}`
     : orderDetails.recipientAddress
+    
   const recipientContact = recipient ? recipient.contactNumber : orderDetails.recipientContactNumber
 
   // Change the trackingNumber generation to use shortId
@@ -132,7 +135,7 @@ export function WaybillContent({ orderDetails, parcel, recipient}: WaybillConten
       </div>
 
       {/* QR Code and Delivery Type Indicator side by side */}
-      <div className="flex justify-between items-center mt-4 w-full">
+      <div className="flex justify-between items-center mt-4 w-full qr-code-section">
         <div>
           <QRCode value={trackingNumber} size={85} style={{ height: "auto", maxWidth: "100%", width: "85px" }} />
         </div>
@@ -143,8 +146,41 @@ export function WaybillContent({ orderDetails, parcel, recipient}: WaybillConten
         </div>
       </div>
 
-      {/* Barcode - Positioned at the very bottom with clear separation */}
-      <div className="absolute left-0 right-0 flex justify-center w-full" style={{ bottom: "4mm" }}>
+      {/* Barcode - Responsive to available space */}
+      <div 
+        className="absolute left-0 right-0 flex justify-center w-full" 
+        style={{ 
+          bottom: "4mm",
+          transform: "scale(var(--barcode-scale, 1))",
+          transformOrigin: "center bottom"
+        }}
+        ref={(el) => {
+          if (el) {
+            // Calculate available space and adjust barcode size if needed
+            const waybillContent = el.closest('.waybill-content');
+            if (waybillContent) {
+              const waybillRect = waybillContent.getBoundingClientRect();
+              const elRect = el.getBoundingClientRect();
+              const qrCodeSection = waybillContent.querySelector('.qr-code-section');
+              const qrCodeRect = qrCodeSection ? qrCodeSection.getBoundingClientRect() : null;
+              
+              // Calculate the bottom position of the QR code section
+              const qrCodeBottom = qrCodeRect ? qrCodeRect.bottom : 0;
+              
+              // Calculate available space between QR code and bottom of waybill
+              const availableSpace = waybillRect.bottom - qrCodeBottom - 10; // 10px buffer
+              
+              // Calculate scale factor if needed
+              if (elRect.height > availableSpace && availableSpace > 0) {
+                const scale = Math.max(0.7, availableSpace / elRect.height);
+                el.style.setProperty('--barcode-scale', scale.toString());
+              } else {
+                el.style.setProperty('--barcode-scale', '1');
+              }
+            }
+          }
+        }}
+      >
         <Barcode
           value={trackingNumber}
           width={1.5}
@@ -158,4 +194,3 @@ export function WaybillContent({ orderDetails, parcel, recipient}: WaybillConten
     </div>
   )
 }
-
