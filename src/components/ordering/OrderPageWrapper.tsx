@@ -15,6 +15,12 @@ export function OrderPageWrapper({ orderId, initialOrderDetails }: OrderPageWrap
   const [isCancelled, setIsCancelled] = useState(false)
   const [orderDetails, setOrderDetails] = useState<OrderWithParcels>(initialOrderDetails)
 
+  // Debug logging
+  useEffect(() => {
+    console.log("OrderPageWrapper - Current order status:", orderDetails.status)
+    console.log("OrderPageWrapper - Initial order status:", initialOrderDetails.status)
+  }, [orderDetails.status, initialOrderDetails.status])
+
   useEffect(() => {
     // Check if the URL contains "status=canceled"
     const fullUrl = window.location.href
@@ -39,8 +45,11 @@ export function OrderPageWrapper({ orderId, initialOrderDetails }: OrderPageWrap
     <>
       <OrderDetails orderId={orderId} initialOrderDetails={orderDetails} />
 
-      {/* Add the DetrackStatusTracker component - show for both paid and processing statuses */}
-      {(orderDetails.status === "paid" || orderDetails.status === "processing") && (
+      {/* Always show the DetrackStatusTracker for paid orders, even if initialOrderDetails hasn't updated yet */}
+      {(orderDetails.status === "paid" ||
+        initialOrderDetails.status === "paid" ||
+        orderDetails.status === "processing" ||
+        initialOrderDetails.status === "processing") && (
         <div className="mt-8">
           <DetrackStatusTracker orderId={orderId} />
         </div>
