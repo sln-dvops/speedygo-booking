@@ -1,7 +1,6 @@
 "use client"
 
 import Image from "next/image"
-import { Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -108,15 +107,12 @@ export function ParcelForm({
       <div className="flex flex-col">
         <div className="relative mb-4">
           <Image
-            src="/placeholder.svg?height=150&width=150"
+            src="/images/Package_cartoon.png"
             alt="Parcel dimensions illustration"
-            width={150}
-            height={150}
+            width={300}
+            height={300}
             className="opacity-80 mx-auto"
           />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Package className="w-16 h-16 text-black/20" />
-          </div>
         </div>
 
         {volumetricWeight > 0 && (

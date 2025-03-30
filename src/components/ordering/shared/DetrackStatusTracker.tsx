@@ -34,14 +34,9 @@ export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
   }, [orderId])
 
   useEffect(() => {
+    // Only fetch status once when component mounts
     fetchStatus()
-
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(() => {
-      fetchStatus()
-    }, 30000)
-
-    return () => clearInterval(interval)
+    // No interval setup - removing continuous polling
   }, [fetchStatus])
 
   const getStatusIcon = (status: string) => {

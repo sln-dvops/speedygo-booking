@@ -230,13 +230,10 @@ export function CsvUploader({ setParcels, setRecipients, isValidDimensions }: Cs
             </TooltipTrigger>
             <TooltipContent>
               <p className="text-xs">
-                CSV Format:
-                <br />
-                weight,length,width,height,name,contactNumber,email,street,unitNo,postalCode
+                CSV Format Example:
                 <br />
                 5,30,20,15,John Doe,12345678,john@example.com,123 Main St,#01-01,123456
                 <br />
-                10,40,30,20,Jane Smith,87654321,jane@example.com,456 Elm St,#02-02,654321
               </p>
             </TooltipContent>
           </Tooltip>
