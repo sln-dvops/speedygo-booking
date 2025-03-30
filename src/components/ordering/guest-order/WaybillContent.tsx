@@ -14,8 +14,7 @@ interface WaybillContentProps {
 }
 
 // This component contains ONLY the content to be printed
-export function WaybillContent({ orderDetails, parcel, recipient, waybillIndex = 0 }: WaybillContentProps) {
-  const isBulkOrder = orderDetails.isBulkOrder && orderDetails.parcels.length > 1
+export function WaybillContent({ orderDetails, parcel, recipient}: WaybillContentProps) {
 
   // For bulk orders, use the recipient details if available
   const recipientName = recipient ? recipient.name : orderDetails.recipientName
@@ -24,10 +23,8 @@ export function WaybillContent({ orderDetails, parcel, recipient, waybillIndex =
     : orderDetails.recipientAddress
   const recipientContact = recipient ? recipient.contactNumber : orderDetails.recipientContactNumber
 
-  // Generate a unique tracking number for each parcel in a bulk order
-  const trackingNumber = isBulkOrder
-    ? `${orderDetails.orderNumber || ""}-${waybillIndex + 1}`
-    : orderDetails.orderNumber || "TEMP-ORDER"
+  // Change the trackingNumber generation to use shortId
+  const trackingNumber = orderDetails.shortId || orderDetails.orderNumber.slice(-12)
 
   // Get the pricing tier from the parcel or recipient
   const pricingTier = parcel.pricingTier || recipient?.pricingTier || "T1"
@@ -149,7 +146,7 @@ export function WaybillContent({ orderDetails, parcel, recipient, waybillIndex =
       {/* Barcode - Positioned at the very bottom with clear separation */}
       <div className="absolute left-0 right-0 flex justify-center w-full" style={{ bottom: "4mm" }}>
         <Barcode
-          value={`SPDY${trackingNumber.slice(-5)}`}
+          value={trackingNumber}
           width={1.5}
           height={35}
           fontSize={10}

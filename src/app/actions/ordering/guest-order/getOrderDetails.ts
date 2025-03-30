@@ -3,32 +3,44 @@
 import { createClient } from "@/utils/supabase/server"
 import type { OrderWithParcels, RecipientDetails } from "@/types/order"
 import type { ParcelDimensions } from "@/types/pricing"
+import { isShortId } from "@/utils/orderIdUtils"
 
-export async function getOrderDetails(orderId: string): Promise<OrderWithParcels | null> {
+export async function getOrderDetails(orderIdOrShortId: string): Promise<OrderWithParcels | null> {
   try {
     const supabase = await createClient()
+    let query = supabase.from("orders").select("*")
+
+    // Check if orderIdOrShortId is a short_id or full UUID
+    if (isShortId(orderIdOrShortId)) {
+      // Search by short_id
+      query = query.eq("short_id", orderIdOrShortId)
+    } else {
+      // Search by full UUID
+      query = query.eq("id", orderIdOrShortId)
+    }
 
     // Get the order details
-    const { data: order, error: orderError } = await supabase.from("orders").select("*").eq("id", orderId).single()
+    const { data: order, error: orderError } = await query.single()
 
     if (orderError) {
-      console.error("Error fetching order:", orderError)
+      console.error(`Error fetching order ${orderIdOrShortId}:`, orderError)
       return null
     }
 
-    // Get the parcels for this order
-    const { data: parcels, error: parcelsError } = await supabase.from("parcels").select("*").eq("order_id", orderId)
+    // IMPORTANT: Always use the full UUID (order.id) for subsequent queries
+    // Get the parcels for this order using the full UUID
+    const { data: parcels, error: parcelsError } = await supabase.from("parcels").select("*").eq("order_id", order.id) // Using full UUID here
 
     if (parcelsError) {
       console.error("Error fetching parcels:", parcelsError)
       return null
     }
 
-    // Check if this is a bulk order
+    // Check if this is a bulk order - using full UUID
     const { data: bulkOrder, error: bulkOrderError } = await supabase
       .from("bulk_orders")
       .select("*")
-      .eq("order_id", orderId)
+      .eq("order_id", order.id) // Using full UUID here
       .maybeSingle()
 
     if (bulkOrderError) {
@@ -61,6 +73,7 @@ export async function getOrderDetails(orderId: string): Promise<OrderWithParcels
     // Construct the response - use the first parcel's recipient details for individual orders
     const orderWithParcels: OrderWithParcels = {
       orderNumber: order.id,
+      shortId: order.short_id, // Include the short_id in the response
       senderName: order.sender_name,
       senderAddress: order.sender_address,
       senderContactNumber: order.sender_contact_number,

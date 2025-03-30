@@ -57,7 +57,8 @@ export function OrderDetails({ orderId, initialOrderDetails }: OrderDetailsProps
         <div className="mb-6">
           <p className="text-black mb-2">Your order has been {status === "paid" ? "confirmed" : "received"}.</p>
           <p className="text-black mb-2">
-            Order Number: <span className="font-semibold">{orderDetails.orderNumber}</span>
+            Order Number:{" "}
+            <span className="font-semibold">{orderDetails.shortId || orderDetails.orderNumber.slice(-12)}</span>
           </p>
           {status === "paid" ? (
             <p className="text-green-600 font-semibold">Payment Status: Paid</p>
@@ -68,9 +69,6 @@ export function OrderDetails({ orderId, initialOrderDetails }: OrderDetailsProps
 
         {status === "paid" && (
           <div className="mt-8">
-            <h3 className="text-xl font-bold text-black mb-4">Your Shipping Label</h3>
-            <p className="text-black mb-4">Please print this shipping label and attach it to your parcel.</p>
-
             <Waybill orderDetails={{ ...orderDetails, status }} />
           </div>
         )}

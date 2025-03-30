@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { getDetrackStatus, type DetrackStatusResponse } from "@/app/actions/ordering/guest-order/getDetrackStatus"
 import { CheckCircle, Clock, Package, Truck, RefreshCw, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -109,17 +109,21 @@ export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Delivery Status</CardTitle>
-          <CardDescription>Tracking information for your order</CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-2xl font-bold text-black">Delivery Status</CardTitle>
+              <p className="text-black mt-2">Tracking information for your order</p>
+            </div>
+            <Button onClick={fetchStatus} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-6">
             <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
             <p className="text-red-600 mb-4">{error}</p>
-            <Button onClick={fetchStatus} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Try Again
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -131,8 +135,8 @@ export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
       <CardHeader>
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle>Delivery Status</CardTitle>
-            <CardDescription>Tracking information for your order</CardDescription>
+            <CardTitle className="text-2xl font-bold text-black">Delivery Status</CardTitle>
+            <p className="text-black mt-2">Tracking information for your order</p>
           </div>
           <Button onClick={fetchStatus} variant="outline" size="sm" disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />

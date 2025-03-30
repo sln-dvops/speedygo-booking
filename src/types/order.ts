@@ -82,14 +82,48 @@ export interface HitPayResponse {
   updated_at: string
 }
 
-export interface OrderWithParcels extends OrderDetails {
-  parcels: (ParcelDimensions & { pricingTier?: string })[]
-  bulkOrder?: {
-    id: string
-    totalParcels: number
-    totalWeight: number
-  }
-  recipients?: RecipientDetails[] // For bulk orders with multiple recipients
+export interface OrderWithParcels {
+  orderNumber: string
+  shortId?: string // Add this field to include the short_id
+  senderName: string
+  senderAddress: string
+  senderContactNumber: string
+  senderEmail: string
+  recipientName: string
+  recipientAddress: string
+  recipientContactNumber: string
+  recipientEmail: string
+  recipientLine1: string
+  recipientLine2?: string
+  recipientPostalCode: string
+  parcelSize: string
+  deliveryMethod: string
+  amount: number
+  status: string
+  isBulkOrder: boolean
+  parcels: ParcelDimensions[]
+  recipients?: RecipientDetails[]
+  bulkOrder?: BulkOrderDetails
+  totalParcels?: number
+  totalWeight?: number
+}
+
+export interface RecipientDetails {
+  name: string
+  address: string
+  contactNumber: string
+  email: string
+  line1: string
+  line2?: string
+  postalCode: string
+  parcelIndex: number
+  pricingTier?: string
+}
+
+export interface BulkOrderDetails {
+  id: string
+  totalParcels: number
+  totalWeight: number
 }
 
 // Update the AddressFormData interface to include recipients

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { detrackConfig, createDetrackHeaders } from "@/config/detrack"
+import { isShortId } from "@/utils/orderIdUtils"
 
 export interface DetrackStatusResponse {
   status: string
@@ -22,16 +23,36 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
     const supabase = await createClient()
     console.log(`Supabase client initialized for order ID: ${orderId}`)
 
-    // 1. Fetch the order to get the Detrack ID
+    // Check if orderId is a short_id and convert to full UUID if needed
+    let fullOrderId = orderId
+
+    if (isShortId(orderId)) {
+      console.log(`${orderId} appears to be a short_id, looking up full UUID`)
+      const { data: orderData, error: lookupError } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("short_id", orderId)
+        .single()
+
+      if (lookupError || !orderData) {
+        console.error(`Error looking up full UUID for short_id ${orderId}:`, lookupError)
+        return null
+      }
+
+      fullOrderId = orderData.id
+      console.log(`Converted short_id ${orderId} to full UUID ${fullOrderId}`)
+    }
+
+    // 1. Fetch the order to get the Detrack ID using the full UUID
     const { data: orderData, error: orderError } = await supabase
       .from("orders")
       .select("detrack_id, status")
-      .eq("id", orderId)
+      .eq("id", fullOrderId)
       .single()
 
-    console.log(`Order data fetched for ${orderId}:`, orderData)
+    console.log(`Order data fetched for ${fullOrderId}:`, orderData)
     if (orderError) {
-      console.error(`Error fetching order ${orderId}:`, orderError)
+      console.error(`Error fetching order ${fullOrderId}:`, orderError)
     }
 
     if (orderError || !orderData) {
@@ -41,14 +62,14 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
 
     // If order is not paid yet, return null
     if (orderData.status !== "paid") {
-      console.log(`Order ${orderId} is not paid yet (status: ${orderData.status}), returning null`)
+      console.log(`Order ${fullOrderId} is not paid yet (status: ${orderData.status}), returning null`)
       return null
     }
 
     // If order is not yet in Detrack (we're still storing detrack_id as a flag),
     // return custom status indicating the issue
     if (!orderData.detrack_id) {
-      console.log(`Order ${orderId} does not have a Detrack ID yet, returning custom error status`)
+      console.log(`Order ${fullOrderId} does not have a Detrack ID yet, returning custom error status`)
       // Use Singapore time for timestamps
       const now = new Date()
       // Format in ISO string but ensure it's in Singapore time (UTC+8)
@@ -96,7 +117,7 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
     // 2. Fetch the delivery status from Detrack using the DO number (which is our order ID)
     // According to Detrack API docs, we should use the DO number, not the Detrack ID
     const baseUrl = detrackConfig.apiUrl
-    const apiUrl = `${baseUrl}/${orderId}` // Use the order ID as the DO number
+    const apiUrl = `${baseUrl}/${fullOrderId}` // Use the full UUID as the DO number
     console.log(`Fetching Detrack status from: ${apiUrl}`)
 
     const response = await fetch(apiUrl, {
@@ -105,7 +126,7 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
       next: { revalidate: 60 }, // Cache for 1 minute
     })
 
-    console.log(`Detrack API response status for ${orderId}: ${response.status} ${response.statusText}`)
+    console.log(`Detrack API response status for ${fullOrderId}: ${response.status} ${response.statusText}`)
 
     if (!response.ok) {
       console.error(`Detrack API error: ${response.status} ${response.statusText}`)
@@ -113,7 +134,7 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
     }
 
     const detrackResponse = await response.json()
-    console.log(`Detrack API response for order ${orderId}:`, JSON.stringify(detrackResponse, null, 2))
+    console.log(`Detrack API response for order ${fullOrderId}:`, JSON.stringify(detrackResponse, null, 2))
 
     const detrackData = detrackResponse.data
 
@@ -122,7 +143,7 @@ export async function getDetrackStatus(orderId: string): Promise<DetrackStatusRe
       return null
     }
 
-    console.log(`Detrack data for order ${orderId}:`, JSON.stringify(detrackData, null, 2))
+    console.log(`Detrack data for order ${fullOrderId}:`, JSON.stringify(detrackData, null, 2))
 
     // 3. Map Detrack status to our format
     const milestones: Array<{

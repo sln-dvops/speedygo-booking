@@ -6,43 +6,28 @@ import { Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { validateOrderId } from "@/utils/orderIdUtils"
 
 export function OrderSearch() {
   const router = useRouter()
   const [orderNumber, setOrderNumber] = useState("")
   const [error, setError] = useState<string | null>(null)
 
-  // Function to validate and format UUID
+  // Function to validate and format order number
   const handleSearch = () => {
     // Reset error
     setError(null)
 
-    // Clean the input (remove spaces and any non-alphanumeric characters except hyphens)
-    let cleanedInput = orderNumber.trim().replace(/[^a-zA-Z0-9-]/g, "")
+    // Validate the order ID
+    const validOrderId = validateOrderId(orderNumber)
 
-    // Check if it's a valid UUID format (with or without hyphens)
-    const uuidRegexWithHyphens = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    const uuidRegexWithoutHyphens = /^[0-9a-f]{32}$/i
-
-    // If input has no hyphens but is 32 chars, add hyphens
-    if (uuidRegexWithoutHyphens.test(cleanedInput)) {
-      cleanedInput = [
-        cleanedInput.slice(0, 8),
-        cleanedInput.slice(8, 12),
-        cleanedInput.slice(12, 16),
-        cleanedInput.slice(16, 20),
-        cleanedInput.slice(20),
-      ].join("-")
-    }
-
-    // Final validation
-    if (!uuidRegexWithHyphens.test(cleanedInput)) {
+    if (!validOrderId) {
       setError("Please enter a valid order number")
       return
     }
 
     // Navigate to the order page
-    router.push(`/order/${cleanedInput}`)
+    router.push(`/order/${validOrderId}`)
   }
 
   return (
@@ -55,7 +40,7 @@ export function OrderSearch() {
       <div className="flex gap-2">
         <div className="flex-1">
           <Input
-            placeholder="Enter order number (e.g., cfd3de32-a403-4abf-bc1e-c23f6186e845)"
+            placeholder="Enter order number (e.g., 6186e845c23f or full UUID)"
             value={orderNumber}
             onChange={(e) => setOrderNumber(e.target.value)}
             className="border-black"
