@@ -80,7 +80,7 @@ export async function getOrderDetails(orderIdOrShortId: string): Promise<OrderWi
       senderEmail: order.sender_email,
       // For individual orders, use the first parcel's recipient details
       recipientName: parcels[0].recipient_name,
-      recipientAddress: parcels[0].recipient_address,
+      recipientAddress: `${parcels[0].recipient_line1}, ${parcels[0].recipient_line2 || ""}, Singapore ${parcels[0].recipient_postal_code}`,
       recipientContactNumber: parcels[0].recipient_contact_number,
       recipientEmail: parcels[0].recipient_email,
       recipientLine1: parcels[0].recipient_line1,

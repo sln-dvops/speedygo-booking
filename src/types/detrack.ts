@@ -73,6 +73,9 @@ export interface DetrackJob {
   city?: string
   state?: string
   country?: string
+  billing_address?: string
+
+  zone?: string // Zone for the job, if applicable
 
   // Sender details
   pick_up_from?: string

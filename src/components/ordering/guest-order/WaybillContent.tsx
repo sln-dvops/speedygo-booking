@@ -14,16 +14,12 @@ interface WaybillContentProps {
 }
 
 // This component contains ONLY the content to be printed
-export function WaybillContent({ orderDetails, parcel, recipient}: WaybillContentProps) {
-
+export function WaybillContent({ orderDetails, parcel, recipient }: WaybillContentProps) {
   // For bulk orders, use the recipient details if available
   const recipientName = recipient ? recipient.name : orderDetails.recipientName
-  
-  // Update address format to "Singapore {postal code}"
   const recipientAddress = recipient
     ? `${recipient.line1}, ${recipient.line2 || ""}, Singapore ${recipient.postalCode}`
     : orderDetails.recipientAddress
-    
   const recipientContact = recipient ? recipient.contactNumber : orderDetails.recipientContactNumber
 
   // Change the trackingNumber generation to use shortId
@@ -66,7 +62,7 @@ export function WaybillContent({ orderDetails, parcel, recipient}: WaybillConten
           </div>
           <div>
             <span className="font-bold">Address: </span>
-            {orderDetails.senderAddress}
+            {orderDetails.senderAddress.replace(/(\d{6})(?:,?\s*Singapore)?$/i, 'Singapore $1')}
           </div>
           <div>
             <span className="font-bold">Contact: </span>
@@ -122,14 +118,6 @@ export function WaybillContent({ orderDetails, parcel, recipient}: WaybillConten
                 1
               </td>
             </tr>
-            <tr>
-              <td className="px-2 py-2" style={{ border: "1px solid black" }}>
-                {orderDetails.deliveryMethod === "atl" ? "ATL Delivery" : "Hand-to-Hand Delivery"}
-              </td>
-              <td className="px-2 py-2 text-center" style={{ border: "1px solid black" }}>
-                -
-              </td>
-            </tr>
           </tbody>
         </table>
       </div>
@@ -147,35 +135,35 @@ export function WaybillContent({ orderDetails, parcel, recipient}: WaybillConten
       </div>
 
       {/* Barcode - Responsive to available space */}
-      <div 
-        className="absolute left-0 right-0 flex justify-center w-full" 
-        style={{ 
+      <div
+        className="absolute left-0 right-0 flex justify-center w-full"
+        style={{
           bottom: "4mm",
           transform: "scale(var(--barcode-scale, 1))",
-          transformOrigin: "center bottom"
+          transformOrigin: "center bottom",
         }}
         ref={(el) => {
           if (el) {
             // Calculate available space and adjust barcode size if needed
-            const waybillContent = el.closest('.waybill-content');
+            const waybillContent = el.closest(".waybill-content")
             if (waybillContent) {
-              const waybillRect = waybillContent.getBoundingClientRect();
-              const elRect = el.getBoundingClientRect();
-              const qrCodeSection = waybillContent.querySelector('.qr-code-section');
-              const qrCodeRect = qrCodeSection ? qrCodeSection.getBoundingClientRect() : null;
-              
+              const waybillRect = waybillContent.getBoundingClientRect()
+              const elRect = el.getBoundingClientRect()
+              const qrCodeSection = waybillContent.querySelector(".qr-code-section")
+              const qrCodeRect = qrCodeSection ? qrCodeSection.getBoundingClientRect() : null
+
               // Calculate the bottom position of the QR code section
-              const qrCodeBottom = qrCodeRect ? qrCodeRect.bottom : 0;
-              
+              const qrCodeBottom = qrCodeRect ? qrCodeRect.bottom : 0
+
               // Calculate available space between QR code and bottom of waybill
-              const availableSpace = waybillRect.bottom - qrCodeBottom - 10; // 10px buffer
-              
+              const availableSpace = waybillRect.bottom - qrCodeBottom - 10 // 10px buffer
+
               // Calculate scale factor if needed
               if (elRect.height > availableSpace && availableSpace > 0) {
-                const scale = Math.max(0.7, availableSpace / elRect.height);
-                el.style.setProperty('--barcode-scale', scale.toString());
+                const scale = Math.max(0.7, availableSpace / elRect.height)
+                el.style.setProperty("--barcode-scale", scale.toString())
               } else {
-                el.style.setProperty('--barcode-scale', '1');
+                el.style.setProperty("--barcode-scale", "1")
               }
             }
           }
