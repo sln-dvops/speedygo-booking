@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Search } from "lucide-react"
+import { Search, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -12,23 +12,45 @@ export function OrderSearch() {
   const router = useRouter()
   const [orderNumber, setOrderNumber] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   // Function to validate and format order number
   const handleSearch = () => {
     // Reset error
     setError(null)
 
-    // Validate the order ID
-    const validOrderId = validateOrderId(orderNumber)
+    // Set loading state to true
+    setIsLoading(true)
 
-    if (!validOrderId) {
-      setError("Please enter a valid order number")
-      return
+    try {
+      // Validate the order ID
+      const validOrderId = validateOrderId(orderNumber)
+
+      if (!validOrderId) {
+        setError("Please enter a valid order number")
+        setIsLoading(false)
+        return
+      }
+
+      // Navigate to the order page
+      router.push(`/order/${validOrderId}`)
+
+      // Note: router.push doesn't return a Promise in Next.js
+      // The loading state will be reset when the new page loads
+      // or when this component unmounts
+    } catch (error: unknown) {
+      console.error("Navigation error:", error)
+      setIsLoading(false)
+      setError("An error occurred while searching. Please try again.")
     }
-
-    // Navigate to the order page
-    router.push(`/order/${validOrderId}`)
   }
+
+  useEffect(() => {
+    return () => {
+      // Reset loading state when component unmounts
+      setIsLoading(false)
+    }
+  }, [])
 
   return (
     <div className="bg-yellow-100 p-6 rounded-lg">
@@ -46,9 +68,18 @@ export function OrderSearch() {
             className="border-black"
           />
         </div>
-        <Button onClick={handleSearch} className="bg-black hover:bg-black/90 text-yellow-400">
-          <Search className="h-4 w-4 mr-2" />
-          Search
+        <Button onClick={handleSearch} className="bg-black hover:bg-black/90 text-yellow-400" disabled={isLoading}>
+          {isLoading ? (
+            <span className="flex items-center">
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              Searching...
+            </span>
+          ) : (
+            <span className="flex items-center">
+              <Search className="h-4 w-4 mr-2" />
+              Search
+            </span>
+          )}
         </Button>
       </div>
 
