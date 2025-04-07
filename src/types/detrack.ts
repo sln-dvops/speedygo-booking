@@ -73,9 +73,7 @@ export interface DetrackJob {
   city?: string
   state?: string
   country?: string
-  billing_address?: string
-
-  zone?: string // Zone for the job, if applicable
+  zone?: string
 
   // Sender details
   pick_up_from?: string
@@ -95,6 +93,7 @@ export interface DetrackJob {
   shipper_address?: string
   vendor_address?: string
   from_address?: string
+  billing_address?: string
 
   // Parcel details
   weight?: number

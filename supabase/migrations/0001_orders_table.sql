@@ -44,7 +44,9 @@ CREATE TABLE public.parcels (
     recipient_postal_code TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    detrack_item_id TEXT
+    detrack_item_id TEXT,
+    detrack_job_id TEXT,
+    status TEXT DEFAULT 'pending'
 );
 
 -- Add indexes for better query performance

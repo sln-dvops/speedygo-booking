@@ -23,6 +23,7 @@ interface ParcelData {
   recipient_line2?: string | null
   recipient_postal_code: string
   created_at?: string
+  detrack_job_id?: string
 }
 
 /**
@@ -31,7 +32,7 @@ interface ParcelData {
  */
 export async function createDetrackOrder(
   orderId: string,
-): Promise<{ success: boolean; message: string; detrackId?: string }> {
+): Promise<{ success: boolean; message: string; detrackId?: string; detrackIds?: string[] }> {
   try {
     console.log(`Creating Detrack order for order ID: ${orderId}`)
 
@@ -61,7 +62,7 @@ export async function createDetrackOrder(
     }
 
     // 2. Check if order is already in Detrack
-    if (orderData.detrack_id) {
+    if (orderData.detrack_id && !orderData.is_bulk_order) {
       console.log(`Order ${orderId} already has Detrack ID: ${orderData.detrack_id}`)
       return { success: true, message: "Order already exists in Detrack", detrackId: orderData.detrack_id }
     }
@@ -77,6 +78,20 @@ export async function createDetrackOrder(
       return { success: false, message: `No parcels found for order: ${parcelsError?.message || "Unknown error"}` }
     }
 
+    // Check if all parcels already have Detrack job IDs for bulk orders
+    if (orderData.is_bulk_order) {
+      const allParcelsHaveDetrackIds = parcelsData.every((parcel) => parcel.detrack_job_id)
+      if (allParcelsHaveDetrackIds) {
+        console.log(`All parcels for bulk order ${orderId} already have Detrack job IDs`)
+        const detrackIds = parcelsData.map((parcel) => parcel.detrack_job_id)
+        return {
+          success: true,
+          message: "All parcels already exist in Detrack",
+          detrackIds,
+        }
+      }
+    }
+
     // 4. Convert database data to our internal types
     const parcels: ParcelDimensions[] = parcelsData.map((parcel: ParcelData) => {
       // Calculate volumetric weight
@@ -86,6 +101,7 @@ export async function createDetrackOrder(
       const effectiveWeight = Math.max(parcel.weight, volumetricWeight)
 
       return {
+        id: parcel.id,
         weight: parcel.weight,
         length: parcel.length,
         width: parcel.width,
@@ -148,117 +164,267 @@ export async function createDetrackOrder(
       }
     }
 
-    // 7. Convert our order to Detrack job format
-    // Note: We use the order ID as the DO number in Detrack, which is what we'll use to fetch status later
-    const detrackJob: DetrackJob = convertOrderToDetrackJob(order)
-
     // Set the date to Singapore time (UTC+8)
     const now = new Date()
     const sgDate = new Date(now.getTime() + 8 * 60 * 60 * 1000)
     const formattedDate = sgDate.toISOString().split("T")[0] // YYYY-MM-DD format
 
-    // Set the date in the job to Singapore time
-    detrackJob.date = formattedDate
-    detrackJob.start_date = formattedDate
+    // 7. Handle different logic for bulk vs individual orders
+    if (orderData.is_bulk_order) {
+      // For bulk orders, create a separate Detrack job for each parcel
+      console.log(`Creating ${parcelsData.length} separate Detrack jobs for bulk order ${orderId}`)
 
-    // 8. Send the job to Detrack API
-    console.log("Sending job to Detrack:", JSON.stringify(detrackJob, null, 2))
-
-    // Use the full API URL directly from the environment variable
-    const apiUrl = detrackConfig.apiUrl
-    console.log(`Detrack API URL: ${apiUrl}`)
-
-    const headers = createDetrackHeaders()
-    console.log(`Detrack API Headers: ${JSON.stringify(headers, null, 2)}`)
-
-    try {
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify({ data: detrackJob }),
-      })
-
-      console.log(`Detrack API response status: ${response.status} ${response.statusText}`)
-
-      const responseText = await response.text()
-      console.log(`Detrack API response body: ${responseText}`)
-
-      if (!response.ok) {
-        return {
-          success: false,
-          message: `Detrack API error: ${response.status} ${response.statusText} - ${responseText}`,
+      const detrackIds: string[] = []
+      const detrackJobPromises = parcelsData.map(async (parcel, index) => {
+        // Skip parcels that already have a Detrack job ID
+        if (parcel.detrack_job_id) {
+          console.log(`Parcel ${parcel.id} already has Detrack job ID: ${parcel.detrack_job_id}`)
+          detrackIds.push(parcel.detrack_job_id)
+          return { success: true, parcelId: parcel.id, detrackId: parcel.detrack_job_id }
         }
-      }
 
-      // Parse the response as JSON
-      let detrackResponse
-      try {
-        detrackResponse = JSON.parse(responseText)
-      } catch (error) {
-        console.error("Error parsing Detrack API response:", error)
-        return {
-          success: false,
-          message: `Error parsing Detrack API response: ${error instanceof Error ? error.message : String(error)}`,
+        // Create a modified order object for this specific parcel
+        const parcelOrder = {
+          ...order,
+          // Use the parcel ID as the tracking number
+          orderNumber: parcel.id,
+          // Use this specific parcel's recipient details
+          recipientName: parcel.recipient_name,
+          recipientAddress: parcel.recipient_address,
+          recipientContactNumber: parcel.recipient_contact_number,
+          recipientEmail: parcel.recipient_email,
+          recipientLine1: parcel.recipient_line1,
+          recipientLine2: parcel.recipient_line2 || undefined,
+          recipientPostalCode: parcel.recipient_postal_code,
+          // Include only this parcel
+          parcels: [parcels[index]],
         }
-      }
 
-      // 9. Extract the Detrack ID from the response
-      const detrackId = detrackResponse.data?.id
+        // Convert to Detrack job format
+        const detrackJob: DetrackJob = convertOrderToDetrackJob(parcelOrder)
 
-      if (!detrackId) {
-        return { success: false, message: "Detrack API did not return an ID" }
-      }
+        // Set the date in the job to Singapore time
+        detrackJob.date = formattedDate
+        detrackJob.start_date = formattedDate
 
-      // 10. Extract Detrack item IDs and update parcels
-      const detrackItems = detrackResponse.data?.items || []
+        // Use the parcel ID as the DO number and tracking number
+        detrackJob.do_number = parcel.id
+        detrackJob.tracking_number = parcel.id
 
-      console.log(`Found ${detrackItems.length} Detrack items for ${parcelsData.length} parcels`)
+        // Add reference to the parent order
+        detrackJob.order_number = orderId
 
-      // Update each parcel with its corresponding Detrack item ID
-      const updatePromises = parcelsData.map(async (parcel: ParcelData, index: number) => {
-        if (index < detrackItems.length) {
-          const detrackItem = detrackItems[index]
-          console.log(`Updating parcel ${parcel.id} with Detrack item ID ${detrackItem.id}`)
+        try {
+          // Send the job to Detrack API
+          console.log(`Sending job to Detrack for parcel ${parcel.id}:`, JSON.stringify(detrackJob, null, 2))
 
-          const { error } = await supabase
+          const response = await fetch(detrackConfig.apiUrl, {
+            method: "POST",
+            headers: createDetrackHeaders(),
+            body: JSON.stringify({ data: detrackJob }),
+          })
+
+          console.log(`Detrack API response status for parcel ${parcel.id}: ${response.status} ${response.statusText}`)
+
+          const responseText = await response.text()
+          console.log(`Detrack API response body for parcel ${parcel.id}: ${responseText}`)
+
+          if (!response.ok) {
+            return {
+              success: false,
+              parcelId: parcel.id,
+              error: `Detrack API error: ${response.status} ${response.statusText} - ${responseText}`,
+            }
+          }
+
+          // Parse the response as JSON
+          let detrackResponse
+          try {
+            detrackResponse = JSON.parse(responseText)
+          } catch (error) {
+            return {
+              success: false,
+              parcelId: parcel.id,
+              error: `Error parsing Detrack API response: ${error instanceof Error ? error.message : String(error)}`,
+            }
+          }
+
+          // Extract the Detrack ID from the response
+          const detrackId = detrackResponse.data?.id
+
+          if (!detrackId) {
+            return {
+              success: false,
+              parcelId: parcel.id,
+              error: "Detrack API did not return an ID",
+            }
+          }
+
+          // Update the parcel with the Detrack job ID
+          const { error: updateError } = await supabase
             .from("parcels")
-            .update({ detrack_item_id: detrackItem.id })
+            .update({ detrack_job_id: detrackId })
             .eq("id", parcel.id)
 
-          if (error) {
-            console.error(`Error updating parcel ${parcel.id} with Detrack item ID:`, error)
+          if (updateError) {
+            console.error(`Error updating parcel ${parcel.id} with Detrack job ID:`, updateError)
           }
-        } else {
-          console.warn(`No Detrack item found for parcel at index ${index}`)
+
+          detrackIds.push(detrackId)
+          return { success: true, parcelId: parcel.id, detrackId }
+        } catch (error) {
+          console.error(`Error creating Detrack job for parcel ${parcel.id}:`, error)
+          return {
+            success: false,
+            parcelId: parcel.id,
+            error: `Error: ${error instanceof Error ? error.message : String(error)}`,
+          }
         }
       })
 
-      // Wait for all parcel updates to complete
-      await Promise.all(updatePromises)
+      // Wait for all Detrack job creations to complete
+      const results = await Promise.all(detrackJobPromises)
 
-      // 11. Update the order with the Detrack ID (we store this as a flag to indicate the order exists in Detrack)
-      // Note: For status retrieval, we'll use the order ID (DO number), not this Detrack ID
-      const { error: updateError } = await supabase.from("orders").update({ detrack_id: detrackId }).eq("id", orderId)
+      // Check if all jobs were created successfully
+      const allSuccessful = results.every((result) => result.success)
 
-      if (updateError) {
-        console.error("Error updating order with Detrack ID:", updateError)
-        return {
-          success: true,
-          message: `Detrack order created but failed to update local order: ${updateError.message}`,
-          detrackId,
+      // Update the order with a flag indicating Detrack jobs were created
+      if (detrackIds.length > 0) {
+        const { error: updateError } = await supabase
+          .from("orders")
+          .update({ detrack_id: "BULK_ORDER_MULTIPLE_JOBS" })
+          .eq("id", orderId)
+
+        if (updateError) {
+          console.error("Error updating order with Detrack flag:", updateError)
         }
       }
 
-      return {
-        success: true,
-        message: "Detrack order created successfully",
-        detrackId,
+      if (allSuccessful) {
+        return {
+          success: true,
+          message: `Created ${detrackIds.length} Detrack jobs for bulk order successfully`,
+          detrackIds,
+        }
+      } else {
+        const failedCount = results.filter((result) => !result.success).length
+        return {
+          success: detrackIds.length > 0, // Partial success if at least one job was created
+          message: `Created ${detrackIds.length} Detrack jobs, but ${failedCount} failed`,
+          detrackIds: detrackIds.length > 0 ? detrackIds : undefined,
+        }
       }
-    } catch (fetchError) {
-      console.error("Error making request to Detrack API:", fetchError)
-      return {
-        success: false,
-        message: `Error making request to Detrack API: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`,
+    } else {
+      // For individual orders, create a single Detrack job
+      // 7. Convert our order to Detrack job format
+      const detrackJob: DetrackJob = convertOrderToDetrackJob(order)
+
+      // Set the date in the job to Singapore time
+      detrackJob.date = formattedDate
+      detrackJob.start_date = formattedDate
+
+      // 8. Send the job to Detrack API
+      console.log("Sending job to Detrack:", JSON.stringify(detrackJob, null, 2))
+
+      // Use the full API URL directly from the environment variable
+      const apiUrl = detrackConfig.apiUrl
+      console.log(`Detrack API URL: ${apiUrl}`)
+
+      const headers = createDetrackHeaders()
+      console.log(`Detrack API Headers: ${JSON.stringify(headers, null, 2)}`)
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify({ data: detrackJob }),
+        })
+
+        console.log(`Detrack API response status: ${response.status} ${response.statusText}`)
+
+        const responseText = await response.text()
+        console.log(`Detrack API response body: ${responseText}`)
+
+        if (!response.ok) {
+          return {
+            success: false,
+            message: `Detrack API error: ${response.status} ${response.statusText} - ${responseText}`,
+          }
+        }
+
+        // Parse the response as JSON
+        let detrackResponse
+        try {
+          detrackResponse = JSON.parse(responseText)
+        } catch (error) {
+          console.error("Error parsing Detrack API response:", error)
+          return {
+            success: false,
+            message: `Error parsing Detrack API response: ${error instanceof Error ? error.message : String(error)}`,
+          }
+        }
+
+        // 9. Extract the Detrack ID from the response
+        const detrackId = detrackResponse.data?.id
+
+        if (!detrackId) {
+          return { success: false, message: "Detrack API did not return an ID" }
+        }
+
+        // 10. Extract Detrack item IDs and update parcels
+        const detrackItems = detrackResponse.data?.items || []
+
+        console.log(`Found ${detrackItems.length} Detrack items for ${parcelsData.length} parcels`)
+
+        // Update each parcel with its corresponding Detrack item ID
+        const updatePromises = parcelsData.map(async (parcel: ParcelData, index: number) => {
+          if (index < detrackItems.length) {
+            const detrackItem = detrackItems[index]
+            console.log(`Updating parcel ${parcel.id} with Detrack item ID ${detrackItem.id}`)
+
+            const { error } = await supabase
+              .from("parcels")
+              .update({
+                detrack_item_id: detrackItem.id,
+                detrack_job_id: detrackId, // Also store the job ID for individual orders
+              })
+              .eq("id", parcel.id)
+
+            if (error) {
+              console.error(`Error updating parcel ${parcel.id} with Detrack item ID:`, error)
+            }
+          } else {
+            console.warn(`No Detrack item found for parcel at index ${index}`)
+          }
+        })
+
+        // Wait for all parcel updates to complete
+        await Promise.all(updatePromises)
+
+        // 11. Update the order with the Detrack ID (we store this as a flag to indicate the order exists in Detrack)
+        // Note: For status retrieval, we'll use the order ID (DO number), not this Detrack ID
+        const { error: updateError } = await supabase.from("orders").update({ detrack_id: detrackId }).eq("id", orderId)
+
+        if (updateError) {
+          console.error("Error updating order with Detrack ID:", updateError)
+          return {
+            success: true,
+            message: `Detrack order created but failed to update local order: ${updateError.message}`,
+            detrackId,
+          }
+        }
+
+        return {
+          success: true,
+          message: "Detrack order created successfully",
+          detrackId,
+        }
+      } catch (fetchError) {
+        console.error("Error making request to Detrack API:", fetchError)
+        return {
+          success: false,
+          message: `Error making request to Detrack API: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`,
+        }
       }
     }
   } catch (error) {

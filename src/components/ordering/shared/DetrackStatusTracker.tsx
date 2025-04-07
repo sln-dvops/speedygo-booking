@@ -2,42 +2,149 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { getDetrackStatus, type DetrackStatusResponse } from "@/app/actions/ordering/guest-order/getDetrackStatus"
-import { CheckCircle, Clock, Package, Truck, RefreshCw, AlertCircle } from "lucide-react"
+import { CheckCircle, Clock, Package, Truck, RefreshCw, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getParcelIdsForOrder } from "@/app/actions/ordering/guest-order/getParcelIds" // We'll create this server action
 
 export interface DetrackStatusTrackerProps {
   orderId: string
+  isBulkOrder?: boolean
+  totalParcels?: number
 }
 
-export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
+export function DetrackStatusTracker({ orderId, isBulkOrder = false, totalParcels = 1 }: DetrackStatusTrackerProps) {
   const [status, setStatus] = useState<DetrackStatusResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date())
+  const [currentParcelIndex, setCurrentParcelIndex] = useState(0)
+  const [parcelStatuses, setParcelStatuses] = useState<(DetrackStatusResponse | null)[]>(() =>
+    isBulkOrder && totalParcels > 1 ? Array(totalParcels).fill(null) : [],
+  )
+  const [parcelIds, setParcelIds] = useState<string[]>([])
+  const [loadingParcelIds, setLoadingParcelIds] = useState(false)
 
-  const fetchStatus = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await getDetrackStatus(orderId)
-      setStatus(data)
-      setLastRefreshed(new Date())
-    } catch (err) {
-      setError("Failed to load tracking information. Please try again later.")
-      console.error("Error fetching tracking status:", err)
-    } finally {
-      setLoading(false)
-    }
-  }, [orderId])
-
+  // Fetch parcel IDs for bulk orders
   useEffect(() => {
-    // Only fetch status once when component mounts
-    fetchStatus()
-    // No interval setup - removing continuous polling
-  }, [fetchStatus])
+    async function fetchParcelIds() {
+      if (isBulkOrder && totalParcels > 1) {
+        try {
+          setLoadingParcelIds(true)
+          const ids = await getParcelIdsForOrder(orderId)
+          if (ids && ids.length > 0) {
+            setParcelIds(ids)
+          }
+        } catch (err) {
+          console.error("Error fetching parcel IDs:", err)
+          setError("Failed to load parcel information. Please try again later.")
+        } finally {
+          setLoadingParcelIds(false)
+        }
+      }
+    }
+
+    fetchParcelIds()
+  }, [orderId, isBulkOrder, totalParcels])
+
+  // Function to fetch status for a specific parcel or the main order
+  const fetchStatus = useCallback(
+    async (parcelIndex?: number) => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        // If it's a bulk order and we have a specific parcel index
+        if (isBulkOrder && parcelIndex !== undefined && parcelIds.length > 0) {
+          // Get the parcel ID at the specified index
+          const parcelId = parcelIds[parcelIndex]
+          if (!parcelId) {
+            throw new Error(`Parcel at index ${parcelIndex} not found`)
+          }
+
+          // Fetch the status using the parcel ID
+          const data = await getDetrackStatus(parcelId)
+
+          // Update the status for this specific parcel
+          setParcelStatuses((prev) => {
+            const newStatuses = [...prev]
+            newStatuses[parcelIndex] = data
+            return newStatuses
+          })
+
+          // If this is the current parcel, also update the main status
+          if (parcelIndex === currentParcelIndex) {
+            setStatus(data)
+          }
+        } else {
+          // For individual orders or when no specific parcel is specified
+          const data = await getDetrackStatus(orderId)
+          setStatus(data)
+
+          // For individual orders, also set the first parcel status
+          if (!isBulkOrder) {
+            setParcelStatuses([data])
+          }
+        }
+
+        setLastRefreshed(new Date())
+      } catch (err) {
+        setError("Failed to load tracking information. Please try again later.")
+        console.error("Error fetching tracking status:", err)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [orderId, isBulkOrder, currentParcelIndex, parcelIds],
+  )
+
+  // Initial fetch for all parcels in a bulk order
+  useEffect(() => {
+    if (isBulkOrder && totalParcels > 1) {
+      // Only fetch status if we have parcel IDs
+      if (parcelIds.length > 0) {
+        // Fetch status for the current parcel
+        fetchStatus(currentParcelIndex)
+      }
+    } else {
+      // For individual orders, just fetch the main status
+      fetchStatus()
+    }
+  }, [fetchStatus, isBulkOrder, totalParcels, currentParcelIndex, parcelIds])
+
+  // Function to navigate to the previous parcel
+  const handlePrevParcel = () => {
+    if (currentParcelIndex > 0) {
+      const newIndex = currentParcelIndex - 1
+      setCurrentParcelIndex(newIndex)
+
+      // If we already have the status for this parcel, use it
+      if (parcelStatuses[newIndex]) {
+        setStatus(parcelStatuses[newIndex])
+      } else {
+        // Otherwise fetch it
+        fetchStatus(newIndex)
+      }
+    }
+  }
+
+  // Function to navigate to the next parcel
+  const handleNextParcel = () => {
+    if (currentParcelIndex < totalParcels - 1) {
+      const newIndex = currentParcelIndex + 1
+      setCurrentParcelIndex(newIndex)
+
+      // If we already have the status for this parcel, use it
+      if (parcelStatuses[newIndex]) {
+        setStatus(parcelStatuses[newIndex])
+      } else {
+        // Otherwise fetch it
+        fetchStatus(newIndex)
+      }
+    }
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -114,7 +221,7 @@ export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
               <CardTitle className="text-2xl font-bold text-black">Delivery Status</CardTitle>
               <p className="text-black mt-2">Tracking information for your order</p>
             </div>
-            <Button onClick={fetchStatus} variant="outline" size="sm">
+            <Button onClick={() => fetchStatus(currentParcelIndex)} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4 mr-2" />
               Try Again
             </Button>
@@ -138,14 +245,43 @@ export function DetrackStatusTracker({ orderId }: DetrackStatusTrackerProps) {
             <CardTitle className="text-2xl font-bold text-black">Delivery Status</CardTitle>
             <p className="text-black mt-2">Tracking information for your order</p>
           </div>
-          <Button onClick={fetchStatus} variant="outline" size="sm" disabled={loading}>
+          <Button onClick={() => fetchStatus(currentParcelIndex)} variant="outline" size="sm" disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
       </CardHeader>
       <CardContent>
-        {loading && !status ? (
+        {/* Navigation for bulk orders */}
+        {isBulkOrder && totalParcels > 1 && (
+          <div className="flex justify-between items-center mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrevParcel}
+              disabled={currentParcelIndex === 0 || loadingParcelIds}
+              className="border-black text-black hover:bg-yellow-100"
+            >
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Previous
+            </Button>
+            <span className="font-medium">
+              Parcel {currentParcelIndex + 1} of {totalParcels}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNextParcel}
+              disabled={currentParcelIndex === totalParcels - 1 || loadingParcelIds}
+              className="border-black text-black hover:bg-yellow-100"
+            >
+              Next
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {(loading || loadingParcelIds) && !status ? (
           <div className="space-y-4">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-24 w-full" />

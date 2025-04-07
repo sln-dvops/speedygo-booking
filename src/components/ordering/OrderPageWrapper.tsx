@@ -41,6 +41,10 @@ export function OrderPageWrapper({ orderId, initialOrderDetails }: OrderPageWrap
     return <CancelledOrder orderId={orderId} />
   }
 
+  // Determine if this is a bulk order and how many parcels it has
+  const isBulkOrder = orderDetails.isBulkOrder
+  const totalParcels = orderDetails.parcels?.length || 1
+
   return (
     <>
       <OrderDetails orderId={orderId} initialOrderDetails={orderDetails} />
@@ -51,7 +55,7 @@ export function OrderPageWrapper({ orderId, initialOrderDetails }: OrderPageWrap
         orderDetails.status === "processing" ||
         initialOrderDetails.status === "processing") && (
         <div className="mt-8">
-          <DetrackStatusTracker orderId={orderId} />
+          <DetrackStatusTracker orderId={orderId} isBulkOrder={isBulkOrder} totalParcels={totalParcels} />
         </div>
       )}
     </>

@@ -58,7 +58,12 @@ export async function POST(request: NextRequest) {
 
     // Update the order status in Supabase
     const supabase = await createClient()
-    const { error } = await supabase.from("orders").update({ status: orderStatus }).eq("id", reference_number)
+    const { error, data: orderData } = await supabase
+      .from("orders")
+      .update({ status: orderStatus })
+      .eq("id", reference_number)
+      .select("is_bulk_order")
+      .single()
 
     if (error) {
       console.error("Error updating order status:", error)
@@ -75,6 +80,22 @@ export async function POST(request: NextRequest) {
       createDetrackOrder(reference_number)
         .then((result) => {
           console.log(`Detrack order creation result:`, result)
+
+          // For bulk orders, also update the status of each parcel
+          if (orderData?.is_bulk_order) {
+            // Update all parcels for this order to have the same status
+            supabase
+              .from("parcels")
+              .update({ status: orderStatus })
+              .eq("order_id", reference_number)
+              .then(({ error }) => {
+                if (error) {
+                  console.error(`Error updating parcel statuses for bulk order ${reference_number}:`, error)
+                } else {
+                  console.log(`Updated status for all parcels in bulk order ${reference_number}`)
+                }
+              })
+          }
         })
         .catch((error) => {
           console.error(`Error creating Detrack order:`, error)
