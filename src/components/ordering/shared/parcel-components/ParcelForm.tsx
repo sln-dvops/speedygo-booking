@@ -112,6 +112,7 @@ export function ParcelForm({
             width={300}
             height={300}
             className="opacity-80 mx-auto"
+            priority
           />
         </div>
 
