@@ -9,12 +9,25 @@ export async function POST(request: NextRequest) {
     const rawBody = await request.text()
     console.log("Received Detrack webhook:", rawBody)
 
-    // Parse the JSON body
+    // Parse the form data instead of trying to parse as JSON directly
+    const formData = new URLSearchParams(rawBody)
+
+    // Extract the JSON string from the 'json' parameter and decode it
+    const jsonString = formData.get("json")
+
+    if (!jsonString) {
+      console.error("Missing json parameter in webhook payload")
+      return NextResponse.json({ error: "Missing json parameter" }, { status: 400 })
+    }
+
+    // Decode and parse the JSON
     let body
     try {
-      body = JSON.parse(rawBody)
+      // Decode the URL-encoded JSON string
+      const decodedJson = decodeURIComponent(jsonString)
+      body = JSON.parse(decodedJson)
     } catch (error) {
-      console.error("Error parsing webhook body:", error)
+      console.error("Error parsing webhook JSON:", error)
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
     }
 
@@ -26,7 +39,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Missing signature" }, { status: 401 })
       }
 
-      const expectedSignature = crypto.createHmac("sha256", detrackConfig.webhookSecret).update(rawBody).digest("hex")
+      // For form data, we need to verify the signature against the json parameter
+      const expectedSignature = crypto
+        .createHmac("sha256", detrackConfig.webhookSecret)
+        .update(jsonString)
+        .digest("hex")
 
       if (signature !== expectedSignature) {
         console.error("Invalid Detrack signature")
@@ -111,4 +128,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
-
