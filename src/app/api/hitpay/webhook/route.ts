@@ -1,130 +1,148 @@
 import { type NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 import { createClient } from "@/utils/supabase/server"
-import { detrackConfig } from "@/config/detrack"
+import { createDetrackOrder } from "@/app/actions/ordering/guest-order/createDetrackOrder"
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the raw request body
+    // Get the raw request body as form data
     const rawBody = await request.text()
-    console.log("Received Detrack webhook:", rawBody)
+    console.log("Raw webhook payload:", rawBody)
 
-    // Parse the form data instead of trying to parse as JSON directly
-    const formData = new URLSearchParams(rawBody)
+    // Parse the form data
+    const formData = Object.fromEntries(new URLSearchParams(rawBody))
+    console.log("Parsed form data:", formData)
 
-    // Extract the JSON string from the 'json' parameter and decode it
-    const jsonString = formData.get("json")
-
-    if (!jsonString) {
-      console.error("Missing json parameter in webhook payload")
-      return NextResponse.json({ error: "Missing json parameter" }, { status: 400 })
+    // Extract the HMAC from the form data
+    const receivedHmac = formData.hmac
+    if (!receivedHmac) {
+      console.error("Missing HMAC signature")
+      return NextResponse.json({ error: "Missing HMAC signature" }, { status: 400 })
     }
 
-    // Decode and parse the JSON
-    let body
-    try {
-      // Decode the URL-encoded JSON string
-      const decodedJson = decodeURIComponent(jsonString)
-      body = JSON.parse(decodedJson)
-    } catch (error) {
-      console.error("Error parsing webhook JSON:", error)
-      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+    // Validate the HMAC signature
+    const isValid = validateHmac(formData, process.env.HITPAY_SALT_KEY || "")
+
+    if (!isValid) {
+      console.error("Invalid HMAC signature")
+      return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
     }
 
-    // Verify the webhook signature if a secret is configured
-    if (detrackConfig.webhookSecret) {
-      const signature = request.headers.get("X-Detrack-Signature")
-      if (!signature) {
-        console.error("Missing Detrack signature")
-        return NextResponse.json({ error: "Missing signature" }, { status: 401 })
-      }
+    console.log("HMAC signature validated successfully")
 
-      // For form data, we need to verify the signature against the json parameter
-      const expectedSignature = crypto
-        .createHmac("sha256", detrackConfig.webhookSecret)
-        .update(jsonString)
-        .digest("hex")
+    // Extract payment details
+    const { payment_id, payment_request_id, status, reference_number, amount, currency } = formData
 
-      if (signature !== expectedSignature) {
-        console.error("Invalid Detrack signature")
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
-      }
+    console.log("Processing payment update:", {
+      payment_id,
+      payment_request_id,
+      status,
+      reference_number,
+      amount,
+      currency,
+    })
+
+    // Only process if we have a reference number and status
+    if (!reference_number || !status) {
+      console.error("Missing required fields")
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    // Extract the job data
-    const { data } = body
-    if (!data || !data.do_number) {
-      console.error("Invalid webhook payload")
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 })
+    // Map HitPay status to our status
+    let orderStatus = status.toLowerCase()
+
+    // HitPay uses "completed" for successful payments, we use "paid"
+    if (orderStatus === "completed") {
+      orderStatus = "paid"
     }
 
-    const orderId = data.do_number
-    const status = data.status?.toLowerCase()
-    const trackingStatus = data.tracking_status
-
-    console.log(`Processing Detrack update for order ${orderId}: ${status} (${trackingStatus})`)
-
-    // Map Detrack status to our order status
-    let orderStatus = "processing" // Default status
-
-    switch (status) {
-      case "dispatched":
-        orderStatus = "processing"
-        break
-      case "in_progress":
-        orderStatus = "out_for_delivery"
-        break
-      case "completed":
-        orderStatus = "delivered"
-        break
-      case "failed":
-        orderStatus = "delivery_failed"
-        break
-      case "cancelled":
-        orderStatus = "cancelled"
-        break
-    }
-
-    // Update the order status in our database
+    // Update the order status in Supabase
     const supabase = await createClient()
-    const { error } = await supabase
+    const { error, data: orderData } = await supabase
       .from("orders")
-      .update({
-        status: orderStatus,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", orderId)
+      .update({ status: orderStatus })
+      .eq("id", reference_number)
+      .select("is_bulk_order")
+      .single()
 
     if (error) {
-      console.error(`Error updating order ${orderId} status:`, error)
-      return NextResponse.json({ error: "Database update failed" }, { status: 500 })
+      console.error("Error updating order status:", error)
+      return NextResponse.json({ error: "Failed to update order" }, { status: 500 })
     }
 
-    console.log(`Updated order ${orderId} status to ${orderStatus}`)
+    console.log(`Updated order ${reference_number} status to ${orderStatus}`)
 
-    // If there are item updates, update the corresponding parcels
-    if (data.items && Array.isArray(data.items)) {
-      for (const item of data.items) {
-        if (item.id) {
-          const { error: parcelError } = await supabase
-            .from("parcels")
-            .update({
-              updated_at: new Date().toISOString(),
-              // Add any parcel-specific status fields here if needed
-            })
-            .eq("detrack_item_id", item.id)
+    // If payment is successful, create a Detrack order
+    if (orderStatus === "paid") {
+      console.log(`Payment successful for order ${reference_number}, creating Detrack order`)
 
-          if (parcelError) {
-            console.error(`Error updating parcel with Detrack item ID ${item.id}:`, parcelError)
+      // Create Detrack order asynchronously to avoid blocking the webhook response
+      createDetrackOrder(reference_number)
+        .then((result) => {
+          console.log(`Detrack order creation result:`, result)
+
+          // For bulk orders, also update the status of each parcel
+          if (orderData?.is_bulk_order) {
+            // Update all parcels for this order to have the same status
+            supabase
+              .from("parcels")
+              .update({ status: orderStatus })
+              .eq("order_id", reference_number)
+              .then(({ error }) => {
+                if (error) {
+                  console.error(`Error updating parcel statuses for bulk order ${reference_number}:`, error)
+                } else {
+                  console.log(`Updated status for all parcels in bulk order ${reference_number}`)
+                }
+              })
           }
-        }
-      }
+        })
+        .catch((error) => {
+          console.error(`Error creating Detrack order:`, error)
+        })
     }
 
-    // Return a success response
+    // Return a 200 response to acknowledge receipt of the webhook
     return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error("Error processing Detrack webhook:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  } catch (error: any) {
+    console.error("Error processing webhook:", error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
+
+/**
+ * Validates the HMAC signature according to HitPay's documentation
+ */
+function validateHmac(formData: Record<string, string>, saltKey: string): boolean {
+  try {
+    // Create a copy of the form data without the hmac
+    const { hmac, ...dataWithoutHmac } = formData
+
+    // Create an array of key-value pairs
+    const hmacSource: Record<string, string> = {}
+
+    // Concatenate each key with its value
+    Object.entries(dataWithoutHmac).forEach(([key, value]) => {
+      hmacSource[key] = `${key}${value}`
+    })
+
+    // Sort by key alphabetically
+    const sortedKeys = Object.keys(hmacSource).sort()
+
+    // Concatenate all values in the sorted order
+    const concatenatedString = sortedKeys.map((key) => hmacSource[key]).join("")
+
+    // Generate HMAC-SHA256 signature
+    const calculatedHmac = crypto.createHmac("sha256", saltKey).update(concatenatedString).digest("hex")
+
+    console.log("Calculated HMAC:", calculatedHmac)
+    console.log("Received HMAC:", hmac)
+
+    // Compare the calculated HMAC with the received HMAC
+    return calculatedHmac === hmac
+  } catch (error) {
+    console.error("Error validating HMAC:", error)
+    return false
+  }
+}
+
