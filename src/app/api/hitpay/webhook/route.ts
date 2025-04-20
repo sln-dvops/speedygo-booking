@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update the order status in Supabase
+    console.log(`Updating order ${reference_number} status to ${orderStatus}`)
     const supabase = await createClient()
     const { error, data: orderData } = await supabase
       .from("orders")
@@ -76,30 +77,30 @@ export async function POST(request: NextRequest) {
     if (orderStatus === "paid") {
       console.log(`Payment successful for order ${reference_number}, creating Detrack order`)
 
-      // Create Detrack order asynchronously to avoid blocking the webhook response
-      createDetrackOrder(reference_number)
-        .then((result) => {
-          console.log(`Detrack order creation result:`, result)
+      try {
+        // Create Detrack order asynchronously to avoid blocking the webhook response
+        const detrackResult = await createDetrackOrder(reference_number)
+        console.log(`Detrack order creation result:`, detrackResult)
 
-          // For bulk orders, also update the status of each parcel
-          if (orderData?.is_bulk_order) {
-            // Update all parcels for this order to have the same status
-            supabase
-              .from("parcels")
-              .update({ status: orderStatus })
-              .eq("order_id", reference_number)
-              .then(({ error }) => {
-                if (error) {
-                  console.error(`Error updating parcel statuses for bulk order ${reference_number}:`, error)
-                } else {
-                  console.log(`Updated status for all parcels in bulk order ${reference_number}`)
-                }
-              })
+        // For bulk orders, also update the status of each parcel
+        if (orderData?.is_bulk_order) {
+          console.log(`Updating parcel statuses for bulk order ${reference_number}`)
+          // Update all parcels for this order to have the same status
+          const { error: parcelUpdateError } = await supabase
+            .from("parcels")
+            .update({ status: orderStatus })
+            .eq("order_id", reference_number)
+
+          if (parcelUpdateError) {
+            console.error(`Error updating parcel statuses for bulk order ${reference_number}:`, parcelUpdateError)
+          } else {
+            console.log(`Updated status for all parcels in bulk order ${reference_number}`)
           }
-        })
-        .catch((error) => {
-          console.error(`Error creating Detrack order:`, error)
-        })
+        }
+      } catch (detrackError) {
+        console.error(`Error creating Detrack order:`, detrackError)
+        // Don't fail the webhook response if Detrack creation fails
+      }
     }
 
     // Return a 200 response to acknowledge receipt of the webhook
@@ -145,4 +146,3 @@ function validateHmac(formData: Record<string, string>, saltKey: string): boolea
     return false
   }
 }
-

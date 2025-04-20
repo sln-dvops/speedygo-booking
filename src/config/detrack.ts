@@ -41,6 +41,9 @@ export function convertOrderToDetrackJob(order: OrderWithParcels): DetrackJob {
     address_1: order.recipientLine1,
     address_2: order.recipientLine2 || "",
     postal_code: order.recipientPostalCode,
+    city: "Singapore", // Set city to Singapore
+    state: "Singapore", // Set state to Singapore
+    country: "Singapore", // Default to Singapore
     zone: order.senderAddress,
 
     // Sender details - using pick_up fields
@@ -92,13 +95,40 @@ export function convertOrderToDetrackJob(order: OrderWithParcels): DetrackJob {
   return job
 }
 
-/**
- * Creates headers for Detrack API requests
- */
+// Add a retry mechanism to the createDetrackHeaders function
 export function createDetrackHeaders(): HeadersInit {
+  // Check if API key is available
+  if (!detrackConfig.apiKey) {
+    console.error("Detrack API key is missing or empty")
+  }
+
   return {
     "Content-Type": "application/json",
     "X-API-KEY": detrackConfig.apiKey,
   }
 }
 
+// Add a helper function to retry failed API calls
+export async function retryDetrackApiCall<T>(apiCall: () => Promise<T>, maxRetries = 3, delayMs = 1000): Promise<T> {
+  let lastError: any
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Detrack API call attempt ${attempt}/${maxRetries}`)
+      return await apiCall()
+    } catch (error) {
+      lastError = error
+      console.error(`Detrack API call failed (attempt ${attempt}/${maxRetries}):`, error)
+
+      if (attempt < maxRetries) {
+        // Wait before retrying (with exponential backoff)
+        const backoffDelay = delayMs * Math.pow(2, attempt - 1)
+        console.log(`Retrying in ${backoffDelay}ms...`)
+        await new Promise((resolve) => setTimeout(resolve, backoffDelay))
+      }
+    }
+  }
+
+  // If we get here, all retries failed
+  throw lastError
+}

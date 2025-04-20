@@ -51,15 +51,20 @@ export async function createDetrackOrder(
     console.log(`Using Detrack API URL: ${detrackConfig.apiUrl}`)
 
     // Initialize Supabase client
+    console.log("Initializing Supabase client...")
     const supabase = await createClient()
+    console.log("Supabase client initialized successfully")
 
     // 1. Fetch the order details
+    console.log(`Fetching order details for order ID: ${orderId}`)
     const { data: orderData, error: orderError } = await supabase.from("orders").select("*").eq("id", orderId).single()
+    console.log("Order query completed")
 
     if (orderError || !orderData) {
       console.error("Error fetching order:", orderError)
       return { success: false, message: `Order not found: ${orderError?.message || "Unknown error"}` }
     }
+    console.log(`Order data retrieved successfully: ${JSON.stringify(orderData, null, 2).substring(0, 200)}...`)
 
     // 2. Check if order is already in Detrack
     if (orderData.detrack_id && !orderData.is_bulk_order) {
@@ -68,15 +73,18 @@ export async function createDetrackOrder(
     }
 
     // 3. Fetch parcels for this order
+    console.log(`Fetching parcels for order ID: ${orderId}`)
     const { data: parcelsData, error: parcelsError } = await supabase
       .from("parcels")
       .select("*")
       .eq("order_id", orderId)
+    console.log("Parcels query completed")
 
     if (parcelsError || !parcelsData || parcelsData.length === 0) {
       console.error("Error fetching parcels:", parcelsError)
       return { success: false, message: `No parcels found for order: ${parcelsError?.message || "Unknown error"}` }
     }
+    console.log(`Found ${parcelsData.length} parcels for order ${orderId}`)
 
     // Check if all parcels already have Detrack job IDs for bulk orders
     if (orderData.is_bulk_order) {
@@ -93,6 +101,7 @@ export async function createDetrackOrder(
     }
 
     // 4. Convert database data to our internal types
+    console.log("Converting database data to internal types...")
     const parcels: ParcelDimensions[] = parcelsData.map((parcel: ParcelData) => {
       // Calculate volumetric weight
       const volumetricWeight = (parcel.length * parcel.width * parcel.height) / 5000
@@ -122,8 +131,10 @@ export async function createDetrackOrder(
       parcelIndex: index,
       pricingTier: parcel.pricing_tier,
     }))
+    console.log("Data conversion completed")
 
     // 5. Create the OrderWithParcels object
+    console.log("Creating OrderWithParcels object...")
     const order: OrderWithParcels = {
       orderNumber: orderId,
       senderName: orderData.sender_name,
@@ -146,14 +157,17 @@ export async function createDetrackOrder(
       parcels,
       recipients: orderData.is_bulk_order ? recipients : undefined,
     }
+    console.log("OrderWithParcels object created")
 
     // 6. If it's a bulk order, fetch the bulk order details
     if (orderData.is_bulk_order) {
+      console.log("Fetching bulk order details...")
       const { data: bulkOrderData, error: bulkOrderError } = await supabase
         .from("bulk_orders")
         .select("*")
         .eq("order_id", orderId)
         .single()
+      console.log("Bulk order query completed")
 
       if (!bulkOrderError && bulkOrderData) {
         order.bulkOrder = {
@@ -161,6 +175,7 @@ export async function createDetrackOrder(
           totalParcels: bulkOrderData.total_parcels,
           totalWeight: bulkOrderData.total_weight,
         }
+        console.log("Bulk order details added to order object")
       }
     }
 
@@ -168,6 +183,7 @@ export async function createDetrackOrder(
     const now = new Date()
     const sgDate = new Date(now.getTime() + 8 * 60 * 60 * 1000)
     const formattedDate = sgDate.toISOString().split("T")[0] // YYYY-MM-DD format
+    console.log(`Using formatted date: ${formattedDate}`)
 
     // 7. Handle different logic for bulk vs individual orders
     if (orderData.is_bulk_order) {
@@ -218,11 +234,16 @@ export async function createDetrackOrder(
           // Send the job to Detrack API
           console.log(`Sending job to Detrack for parcel ${parcel.id}:`, JSON.stringify(detrackJob, null, 2))
 
+          // Add timeout to fetch request
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+
           const response = await fetch(detrackConfig.apiUrl, {
             method: "POST",
             headers: createDetrackHeaders(),
             body: JSON.stringify({ data: detrackJob }),
-          })
+            signal: controller.signal,
+          }).finally(() => clearTimeout(timeoutId))
 
           console.log(`Detrack API response status for parcel ${parcel.id}: ${response.status} ${response.statusText}`)
 
@@ -242,6 +263,7 @@ export async function createDetrackOrder(
           try {
             detrackResponse = JSON.parse(responseText)
           } catch (error) {
+            console.error(`Error parsing Detrack API response for parcel ${parcel.id}:`, error)
             return {
               success: false,
               parcelId: parcel.id,
@@ -253,6 +275,7 @@ export async function createDetrackOrder(
           const detrackId = detrackResponse.data?.id
 
           if (!detrackId) {
+            console.error(`Detrack API did not return an ID for parcel ${parcel.id}`)
             return {
               success: false,
               parcelId: parcel.id,
@@ -261,6 +284,7 @@ export async function createDetrackOrder(
           }
 
           // Update the parcel with the Detrack job ID
+          console.log(`Updating parcel ${parcel.id} with Detrack job ID: ${detrackId}`)
           const { error: updateError } = await supabase
             .from("parcels")
             .update({ detrack_job_id: detrackId })
@@ -268,6 +292,8 @@ export async function createDetrackOrder(
 
           if (updateError) {
             console.error(`Error updating parcel ${parcel.id} with Detrack job ID:`, updateError)
+          } else {
+            console.log(`Successfully updated parcel ${parcel.id} with Detrack job ID`)
           }
 
           detrackIds.push(detrackId)
@@ -283,13 +309,20 @@ export async function createDetrackOrder(
       })
 
       // Wait for all Detrack job creations to complete
+      console.log(`Waiting for ${detrackJobPromises.length} Detrack job creations to complete...`)
       const results = await Promise.all(detrackJobPromises)
+      console.log(
+        `All Detrack job creations completed with results:`,
+        results.map((r) => (r.success ? "success" : "failure")),
+      )
 
       // Check if all jobs were created successfully
       const allSuccessful = results.every((result) => result.success)
+      console.log(`All jobs successful: ${allSuccessful}`)
 
       // Update the order with a flag indicating Detrack jobs were created
       if (detrackIds.length > 0) {
+        console.log(`Updating order ${orderId} with Detrack flag`)
         const { error: updateError } = await supabase
           .from("orders")
           .update({ detrack_id: "BULK_ORDER_MULTIPLE_JOBS" })
@@ -297,10 +330,13 @@ export async function createDetrackOrder(
 
         if (updateError) {
           console.error("Error updating order with Detrack flag:", updateError)
+        } else {
+          console.log(`Successfully updated order ${orderId} with Detrack flag`)
         }
       }
 
       if (allSuccessful) {
+        console.log(`Successfully created ${detrackIds.length} Detrack jobs for bulk order`)
         return {
           success: true,
           message: `Created ${detrackIds.length} Detrack jobs for bulk order successfully`,
@@ -308,6 +344,7 @@ export async function createDetrackOrder(
         }
       } else {
         const failedCount = results.filter((result) => !result.success).length
+        console.log(`Created ${detrackIds.length} Detrack jobs, but ${failedCount} failed`)
         return {
           success: detrackIds.length > 0, // Partial success if at least one job was created
           message: `Created ${detrackIds.length} Detrack jobs, but ${failedCount} failed`,
@@ -317,6 +354,7 @@ export async function createDetrackOrder(
     } else {
       // For individual orders, create a single Detrack job
       // 7. Convert our order to Detrack job format
+      console.log("Creating single Detrack job for individual order")
       const detrackJob: DetrackJob = convertOrderToDetrackJob(order)
 
       // Set the date in the job to Singapore time
@@ -334,11 +372,17 @@ export async function createDetrackOrder(
       console.log(`Detrack API Headers: ${JSON.stringify(headers, null, 2)}`)
 
       try {
+        // Add timeout to fetch request
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+
+        console.log("Starting fetch request to Detrack API...")
         const response = await fetch(apiUrl, {
           method: "POST",
           headers: headers,
           body: JSON.stringify({ data: detrackJob }),
-        })
+          signal: controller.signal,
+        }).finally(() => clearTimeout(timeoutId))
 
         console.log(`Detrack API response status: ${response.status} ${response.statusText}`)
 
@@ -346,6 +390,7 @@ export async function createDetrackOrder(
         console.log(`Detrack API response body: ${responseText}`)
 
         if (!response.ok) {
+          console.error(`Detrack API error: ${response.status} ${response.statusText} - ${responseText}`)
           return {
             success: false,
             message: `Detrack API error: ${response.status} ${response.statusText} - ${responseText}`,
@@ -355,7 +400,9 @@ export async function createDetrackOrder(
         // Parse the response as JSON
         let detrackResponse
         try {
+          console.log("Parsing Detrack API response...")
           detrackResponse = JSON.parse(responseText)
+          console.log("Successfully parsed Detrack API response")
         } catch (error) {
           console.error("Error parsing Detrack API response:", error)
           return {
@@ -366,8 +413,10 @@ export async function createDetrackOrder(
 
         // 9. Extract the Detrack ID from the response
         const detrackId = detrackResponse.data?.id
+        console.log(`Extracted Detrack ID: ${detrackId}`)
 
         if (!detrackId) {
+          console.error("Detrack API did not return an ID")
           return { success: false, message: "Detrack API did not return an ID" }
         }
 
@@ -392,6 +441,8 @@ export async function createDetrackOrder(
 
             if (error) {
               console.error(`Error updating parcel ${parcel.id} with Detrack item ID:`, error)
+            } else {
+              console.log(`Successfully updated parcel ${parcel.id} with Detrack item ID`)
             }
           } else {
             console.warn(`No Detrack item found for parcel at index ${index}`)
@@ -399,10 +450,13 @@ export async function createDetrackOrder(
         })
 
         // Wait for all parcel updates to complete
+        console.log("Waiting for all parcel updates to complete...")
         await Promise.all(updatePromises)
+        console.log("All parcel updates completed")
 
         // 11. Update the order with the Detrack ID (we store this as a flag to indicate the order exists in Detrack)
         // Note: For status retrieval, we'll use the order ID (DO number), not this Detrack ID
+        console.log(`Updating order ${orderId} with Detrack ID: ${detrackId}`)
         const { error: updateError } = await supabase.from("orders").update({ detrack_id: detrackId }).eq("id", orderId)
 
         if (updateError) {
@@ -414,6 +468,7 @@ export async function createDetrackOrder(
           }
         }
 
+        console.log(`Successfully created Detrack order for order ${orderId}`)
         return {
           success: true,
           message: "Detrack order created successfully",
@@ -435,4 +490,3 @@ export async function createDetrackOrder(
     }
   }
 }
-
