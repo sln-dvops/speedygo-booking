@@ -9,13 +9,26 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getParcelIdsForOrder } from "@/app/actions/ordering/guest-order/getParcelIds" // We'll create this server action
 
+// First, let's update the props interface to include parcel dimensions
 export interface DetrackStatusTrackerProps {
   orderId: string
   isBulkOrder?: boolean
   totalParcels?: number
+  parcels?: Array<{
+    weight: number
+    length: number
+    width: number
+    height: number
+  }>
 }
 
-export function DetrackStatusTracker({ orderId, isBulkOrder = false, totalParcels = 1 }: DetrackStatusTrackerProps) {
+// Then update the function signature to use the new props
+export function DetrackStatusTracker({
+  orderId,
+  isBulkOrder = false,
+  totalParcels = 1,
+  parcels = [],
+}: DetrackStatusTrackerProps) {
   const [status, setStatus] = useState<DetrackStatusResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -26,6 +39,9 @@ export function DetrackStatusTracker({ orderId, isBulkOrder = false, totalParcel
   )
   const [parcelIds, setParcelIds] = useState<string[]>([])
   const [loadingParcelIds, setLoadingParcelIds] = useState(false)
+
+  // Remove the unused orderDetails state
+  // const [orderDetails, setOrderDetails] = useState<any>(null)
 
   // Fetch parcel IDs for bulk orders
   useEffect(() => {
@@ -237,6 +253,7 @@ export function DetrackStatusTracker({ orderId, isBulkOrder = false, totalParcel
     )
   }
 
+  // Update the navigation section to use the parcels prop
   return (
     <Card>
       <CardHeader>
@@ -265,9 +282,17 @@ export function DetrackStatusTracker({ orderId, isBulkOrder = false, totalParcel
               <ChevronLeft className="mr-1 h-4 w-4" />
               Previous
             </Button>
-            <span className="font-medium">
-              Parcel {currentParcelIndex + 1} of {totalParcels}
-            </span>
+            <div className="flex flex-col items-center">
+              <span className="font-medium">
+                Parcel {currentParcelIndex + 1} of {totalParcels}
+              </span>
+              {isBulkOrder && parcels && parcels.length > 0 && currentParcelIndex < parcels.length && (
+                <Badge variant="outline" className="mt-1 text-xs bg-yellow-100 border-yellow-300">
+                  {parcels[currentParcelIndex].weight.toFixed(1)}kg •{parcels[currentParcelIndex].length}×
+                  {parcels[currentParcelIndex].width}×{parcels[currentParcelIndex].height}cm
+                </Badge>
+              )}
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -316,28 +341,48 @@ export function DetrackStatusTracker({ orderId, isBulkOrder = false, totalParcel
             )}
 
             <div className="relative pl-6 border-l-2 border-gray-200 space-y-6">
-              {status.milestones.map((milestone, index) => (
-                <div key={index} className="relative pb-6">
-                  <div
-                    className="absolute left-0 top-1.5 -ml-2 h-4 w-4 rounded-full ring-2 ring-white"
-                    style={{
-                      backgroundColor:
-                        milestone.status === "completed"
-                          ? "#10b981"
-                          : milestone.status === "current"
-                            ? "#3b82f6"
-                            : "#d1d5db",
-                    }}
-                  />
-                  <div className="ml-6">
-                    <h4 className="font-medium text-gray-900">{milestone.name}</h4>
-                    <p className="text-sm text-gray-500">{milestone.description}</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {milestone.timestamp ? formatDate(milestone.timestamp) : "Pending"}
-                    </p>
+              {status.milestones.map((milestone, index) => {
+                // Determine the correct milestone status based on the tracking status
+                let milestoneStatus = milestone.status
+
+                // If the order is completed/delivered, mark all milestones as completed
+                if (status.status === "completed" || status.trackingStatus.toLowerCase() === "completed") {
+                  milestoneStatus = "completed"
+                }
+                // If the tracking status is "Out for delivery"
+                else if (status.trackingStatus.toLowerCase().includes("out for delivery")) {
+                  if (index === 0 || index === 1) {
+                    // Mark "Order Received" and "Preparing for Shipment" as completed
+                    milestoneStatus = "completed"
+                  } else if (index === 2) {
+                    // Mark "Out for Delivery" as current
+                    milestoneStatus = "current"
+                  }
+                }
+
+                return (
+                  <div key={index} className="relative pb-6">
+                    <div
+                      className="absolute left-0 top-1.5 -ml-2 h-4 w-4 rounded-full ring-2 ring-white"
+                      style={{
+                        backgroundColor:
+                          milestoneStatus === "completed"
+                            ? "#10b981"
+                            : milestoneStatus === "current"
+                              ? "#3b82f6"
+                              : "#d1d5db",
+                      }}
+                    />
+                    <div className="ml-6">
+                      <h4 className="font-medium text-gray-900">{milestone.name}</h4>
+                      <p className="text-sm text-gray-500">{milestone.description}</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {milestone.timestamp ? formatDate(milestone.timestamp) : "Pending"}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             <div className="text-xs text-gray-500 text-right">Last refreshed: {formatLastRefreshed(lastRefreshed)}</div>
@@ -353,4 +398,3 @@ export function DetrackStatusTracker({ orderId, isBulkOrder = false, totalParcel
     </Card>
   )
 }
-

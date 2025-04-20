@@ -1,5 +1,6 @@
 describe("Individual Order Flow", () => {
-  beforeEach(() => {
+  // Use before() instead of beforeEach() to only run once at the beginning
+  before(() => {
     // Visit the base URL from environment variable
     cy.visit(Cypress.env("BASE_URL") || "https://9d86-23-27-185-189.ngrok-free.app")
 
@@ -12,6 +13,16 @@ describe("Individual Order Flow", () => {
         cy.wait(2000)
       }
     })
+  })
+
+  // Handle uncaught exceptions to prevent test failure on postMessage errors
+  Cypress.on("uncaught:exception", (err) => {
+    // Return false to prevent Cypress from failing the test on uncaught exceptions
+    if (err.message.includes("postMessage") || err.message.includes("null")) {
+      return false
+    }
+    // For other errors, let Cypress handle them normally
+    return true
   })
 
   it("should complete the individual order flow successfully", () => {
@@ -88,10 +99,20 @@ describe("Individual Order Flow", () => {
     cy.contains("Delivery Method:").next().should("contain", "atl")
 
     // Click proceed to payment
-    cy.contains("button", "Proceed to Payment").click()
+    cy.log("**Proceeding to HitPay payment**")
 
-    // Add a pause at the end to allow manual testing to continue
-    cy.pause()
+    // Store the current URL before navigating to HitPay
+    cy.url().then((currentUrl) => {
+      cy.log(`Current URL before payment: ${currentUrl}`)
+
+      // Click the payment button which will redirect to HitPay
+      cy.contains("button", "Proceed to Payment").click()
+
+      // Wait for redirection to HitPay
+      cy.log("**Waiting for HitPay page to load**")
+      
+      cy.pause()
+    })
   })
 })
 

@@ -55,10 +55,14 @@ export function OrderPageWrapper({ orderId, initialOrderDetails }: OrderPageWrap
         orderDetails.status === "processing" ||
         initialOrderDetails.status === "processing") && (
         <div className="mt-8">
-          <DetrackStatusTracker orderId={orderId} isBulkOrder={isBulkOrder} totalParcels={totalParcels} />
+          <DetrackStatusTracker
+            orderId={orderId}
+            isBulkOrder={isBulkOrder}
+            totalParcels={totalParcels}
+            parcels={orderDetails.parcels}
+          />
         </div>
       )}
     </>
   )
 }
-

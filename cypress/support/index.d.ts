@@ -25,6 +25,8 @@ declare namespace Cypress {
         width: number | string
         height: number | string
       }): Chainable<Element>
+
+      
     }
   }
   

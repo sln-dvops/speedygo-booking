@@ -19,13 +19,25 @@
 // Cypress.Commands.add('drag', { prevSubject: 'element'}, (subject, options) => { ... })
 
 Cypress.Commands.add("fillAddressForm", (formData) => {
-    cy.get('input[id="name"]').clear().type(formData.name)
-    cy.get('input[id="contactNumber"]').clear().type(formData.contactNumber)
-    cy.get('input[id="email"]').clear().type(formData.email)
-    cy.get('input[id="street"]').clear().type(formData.street)
-    cy.get('input[id="unitNo"]').clear().type(formData.unitNo)
-    cy.get('input[id="postalCode"]').clear().type(formData.postalCode)
-  })
+  // Add a small wait before starting to fill the form
+  cy.wait(500)
+
+  // Fill each field with explicit waits
+  cy.get('input[id="name"]').should("be.visible").clear().type(formData.name)
+  cy.wait(100)
+  cy.get('input[id="contactNumber"]').should("be.visible").clear().type(formData.contactNumber)
+  cy.wait(100)
+  cy.get('input[id="email"]').should("be.visible").clear().type(formData.email)
+  cy.wait(100)
+  cy.get('input[id="street"]').should("be.visible").clear().type(formData.street)
+  cy.wait(100)
+  cy.get('input[id="unitNo"]').should("be.visible").clear().type(formData.unitNo)
+  cy.wait(100)
+  cy.get('input[id="postalCode"]').should("be.visible").clear().type(formData.postalCode)
+
+  // Add a longer delay to allow validation to complete
+  cy.wait(500)
+})
 
   // -- This is a custom command for adding a parcel --
 Cypress.Commands.add("addParcel", (parcelData) => {
@@ -35,6 +47,8 @@ Cypress.Commands.add("addParcel", (parcelData) => {
     cy.get('input[id="height"]').clear().type(parcelData.height.toString())
     cy.contains("button", "Add Parcel").click()
   })
+
+  
 //
 //
 // -- This is a dual command --

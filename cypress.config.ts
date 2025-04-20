@@ -31,16 +31,18 @@ export default defineConfig({
       return config
     },
     viewportWidth: 1280,
-    viewportHeight: 800,
+    viewportHeight: 1280,
     defaultCommandTimeout: 15000, // Increased timeout for slower networks
     pageLoadTimeout: 120000,
     // Retry failed tests
     retries: {
-      runMode: 2,
-      openMode: 1,
+      runMode: 0,
+      openMode: 0,
     },
     // Add experimental features for better stability
     experimentalRunAllSpecs: true,
+    // Enable cross-origin testing
+    chromeWebSecurity: false,
   },
 })
 
