@@ -192,8 +192,8 @@ export function CsvUploader({ setParcels, setRecipients, isValidDimensions }: Cs
     fileInputRef.current?.click()
   }
 
-  // Get the template file path directly from environment variable
-  const templateFilePath = process.env.NEXT_PUBLIC_CSV_TEMPLATE_URL || ""
+  // Use the API endpoint instead of direct URL to enable rate limiting
+  const templateFilePath = "/api/templates/csv"
 
   return (
     <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
