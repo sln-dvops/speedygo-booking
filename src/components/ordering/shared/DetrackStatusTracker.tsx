@@ -95,13 +95,38 @@ export function DetrackStatusTracker({
             setStatus(data)
           }
         } else {
-          // For individual orders or when no specific parcel is specified
-          const data = await getDetrackStatus(orderId)
-          setStatus(data)
-
-          // For individual orders, also set the first parcel status
+          // For individual orders, first fetch the parcel ID
           if (!isBulkOrder) {
-            setParcelStatuses([data])
+            try {
+              // Fetch the parcel ID for this order
+              const ids = await getParcelIdsForOrder(orderId)
+              if (ids && ids.length > 0) {
+                // Use the first parcel ID for individual orders
+                const parcelId = ids[0]
+                console.log(`Using parcel ID ${parcelId} for individual order ${orderId}`)
+
+                // Fetch the status using the parcel ID
+                const data = await getDetrackStatus(parcelId)
+                setStatus(data)
+                setParcelStatuses([data])
+              } else {
+                // Fallback to order ID if no parcel IDs found
+                console.log(`No parcel IDs found for order ${orderId}, falling back to order ID`)
+                const data = await getDetrackStatus(orderId)
+                setStatus(data)
+                setParcelStatuses([data])
+              }
+            } catch (err) {
+              console.error("Error fetching parcel ID for individual order:", err)
+              // Fallback to order ID if error occurs
+              const data = await getDetrackStatus(orderId)
+              setStatus(data)
+              setParcelStatuses([data])
+            }
+          } else {
+            // For bulk orders without a specific parcel index
+            const data = await getDetrackStatus(orderId)
+            setStatus(data)
           }
         }
 

@@ -8,6 +8,9 @@ export interface ParcelDimensions {
   width: number // in cm
   height: number // in cm
   effectiveWeight: number
+  id?: string
+  short_id?: string
+  pricingTier?: string
 }
 
 export interface PricingTier {
@@ -123,4 +126,3 @@ export function determinePricingTier(dimensions: ParcelDimensions): string {
   // Default to highest tier if no match found
   return `T${PRICING_TIERS.length}`
 }
-

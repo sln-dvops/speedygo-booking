@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
@@ -16,6 +17,9 @@ export interface DetrackStatusResponse {
   lastUpdated: string
 }
 
+/**
+ * Main function to get Detrack status - determines if ID is for order or parcel
+ */
 export async function getDetrackStatus(idParam: string): Promise<DetrackStatusResponse | null> {
   console.log(`getDetrackStatus called for ID: ${idParam}`)
   try {
@@ -23,396 +27,209 @@ export async function getDetrackStatus(idParam: string): Promise<DetrackStatusRe
     const supabase = await createClient()
     console.log(`Supabase client initialized for ID: ${idParam}`)
 
+    // Check if the ID is a valid UUID or short_id format
+    const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idParam)
+    const isShortIdFormat = /^[0-9a-f]{12}$/i.test(idParam)
+
+    // If it's not a valid UUID or short_id format, it might be a Detrack ID
+    // In that case, we need to find the corresponding parcel by detrack_job_id
+    if (!isValidUuid && !isShortIdFormat && idParam.length > 20) {
+      console.log(`ID ${idParam} appears to be a Detrack ID, looking for matching parcel`)
+      const { data: parcelByDetrackId } = await supabase
+        .from("parcels")
+        .select("id, order_id, detrack_job_id, status")
+        .eq("detrack_job_id", idParam)
+        .maybeSingle()
+
+      if (parcelByDetrackId) {
+        console.log(`Found parcel with Detrack ID ${idParam}, using parcel ID: ${parcelByDetrackId.id}`)
+        // Use the parcel's actual ID instead of the Detrack ID
+        idParam = parcelByDetrackId.id
+      } else {
+        console.log(`No parcel found with Detrack ID ${idParam}`)
+      }
+    }
+
     // First, determine if this is an order ID or a parcel ID
     // Try to find it in the parcels table first
-    const { data: parcelData, error: parcelError } = await supabase
+    const { data: parcelData } = await supabase
       .from("parcels")
       .select("id, order_id, detrack_job_id, status")
       .eq("id", idParam)
       .maybeSingle()
 
-    // If found in parcels table, use the parcel's detrack_job_id
+    // If found in parcels table, use the parcel workflow
     if (parcelData) {
-      console.log(`ID ${idParam} found in parcels table:`, parcelData)
-
-      // If the parcel doesn't have a detrack_job_id yet, return a placeholder status
-      if (!parcelData.detrack_job_id) {
-        console.log(`Parcel ${idParam} does not have a Detrack job ID yet`)
-        // Use Singapore time for timestamps
-        const now = new Date()
-        const sgTime = new Date(now.getTime()).toISOString()
-
-        return {
-          status: "detrack_missing",
-          trackingStatus: "Tracking ID Missing",
-          milestones: [
-            {
-              name: "Order Received",
-              status: "completed",
-              timestamp: sgTime,
-              description: "Your order has been received and is being processed",
-            },
-            {
-              name: "Tracking Setup",
-              status: "current",
-              timestamp: null,
-              description: "Waiting for tracking ID to be assigned",
-            },
-            {
-              name: "Out for Delivery",
-              status: "upcoming",
-              timestamp: null,
-              description: "Your order will be out for delivery soon",
-            },
-            {
-              name: "Delivered",
-              status: "upcoming",
-              timestamp: null,
-              description: "Your order will be delivered soon",
-            },
-          ],
-          lastUpdated: sgTime,
-        }
-      }
-
-      // Use the parcel's detrack_job_id to fetch status from Detrack API
-      const detrackId = parcelData.id
-
-      // Check if Detrack API URL is configured
-      if (!detrackConfig.apiUrl) {
-        console.error("Detrack API URL is not configured")
-        return null
-      }
-
-      // Fetch the delivery status from Detrack using the detrack_job_id
-      const baseUrl = detrackConfig.apiUrl
-      const apiUrl = `${baseUrl}/${detrackId}`
-      console.log(`Fetching Detrack status from: ${apiUrl}`)
-
-      const response = await fetch(apiUrl, {
-        method: "GET",
-        headers: createDetrackHeaders(),
-        next: { revalidate: 60 }, // Cache for 1 minute
-      })
-
-      console.log(`Detrack API response status for ${detrackId}: ${response.status} ${response.statusText}`)
-
-      if (!response.ok) {
-        console.error(`Detrack API error: ${response.status} ${response.statusText}`)
-        return null
-      }
-
-      const detrackResponse = await response.json()
-      console.log(`Detrack API response for parcel ${idParam}:`, JSON.stringify(detrackResponse, null, 2))
-
-      const detrackData = detrackResponse.data
-
-      if (!detrackData) {
-        console.error("No data returned from Detrack API")
-        return null
-      }
-
-      // Map Detrack status to our format
-      const milestones: Array<{
-        name: string
-        status: "completed" | "current" | "upcoming"
-        timestamp: string | null
-        description: string
-      }> = [
-        {
-          name: "Order Received",
-          status: "completed",
-          timestamp: detrackData.info_received_at || new Date().toISOString(),
-          description: "Your order has been received and is being processed",
-        },
-        {
-          name: "Preparing for Shipment",
-          status: "upcoming",
-          timestamp: detrackData.scheduled_at,
-          description: "Your order is being prepared for shipment",
-        },
-        {
-          name: "Out for Delivery",
-          status: "upcoming",
-          timestamp: detrackData.out_for_delivery_at,
-          description: "Your order is out for delivery",
-        },
-        {
-          name: "Delivered",
-          status: "upcoming",
-          timestamp: detrackData.pod_at,
-          description: "Your order has been delivered",
-        },
-      ]
-
-      // Update milestone statuses based on timestamps
-      let currentMilestoneFound = false
-      for (let i = milestones.length - 1; i >= 0; i--) {
-        if (milestones[i].timestamp) {
-          if (!currentMilestoneFound) {
-            milestones[i].status = "completed"
-          }
-        } else if (!currentMilestoneFound && i > 0 && milestones[i - 1].timestamp) {
-          milestones[i].status = "current"
-          currentMilestoneFound = true
-        }
-      }
-
-      // Use current time for lastUpdated
-      const now = new Date().toISOString()
-
-      return {
-        status: detrackData.status || "processing",
-        trackingStatus: detrackData.tracking_status || "Order received",
-        milestones,
-        lastUpdated: now,
-      }
+      console.log(`ID ${idParam} found in parcels table, using parcel workflow`)
+      return getDetrackStatusForParcel(idParam, parcelData)
     }
 
-    // If not found in parcels, check if it's a short_id and convert to full UUID if needed
-    let fullOrderId = idParam
+    // If not found in parcels, it's likely an order ID
+    console.log(`ID ${idParam} not found in parcels table, using order workflow`)
+    return getDetrackStatusForOrder(idParam, supabase)
+  } catch (error) {
+    console.error("Error fetching Detrack status:", error)
+    return null
+  }
+}
 
-    if (isShortId(idParam)) {
-      console.log(`${idParam} appears to be a short_id, looking up full UUID`)
-      const { data: orderData, error: lookupError } = await supabase
-        .from("orders")
-        .select("id")
-        .eq("short_id", idParam)
-        .single()
+/**
+ * Get Detrack status for a parcel ID (recipient workflow)
+ */
+async function getDetrackStatusForParcel(parcelId: string, parcelData: any): Promise<DetrackStatusResponse | null> {
+  console.log(`Getting Detrack status for parcel: ${parcelId}`)
 
-      if (lookupError || !orderData) {
-        console.error(`Error looking up full UUID for short_id ${idParam}:`, lookupError)
-        return null
-      }
+  // If the parcel doesn't have a detrack_job_id yet, return a placeholder status
+  if (!parcelData.detrack_job_id) {
+    console.log(`Parcel ${parcelId} does not have a Detrack job ID yet`)
+    return createPlaceholderStatus()
+  }
 
-      fullOrderId = orderData.id
-      console.log(`Converted short_id ${idParam} to full UUID ${fullOrderId}`)
-    }
+  // Always use the parcel's internal ID (UUID) for Detrack API calls, not the detrack_job_id
+  const detrackId = parcelId
 
-    // Fetch the order to get the Detrack ID using the full UUID
-    const { data: orderData, error: orderError } = await supabase
+  // Check if Detrack API URL is configured
+  if (!detrackConfig.apiUrl) {
+    console.error("Detrack API URL is not configured")
+    return null
+  }
+
+  // Fetch the delivery status from Detrack using the detrack_job_id
+  const detrackData = await fetchDetrackStatus(detrackId)
+  if (!detrackData) {
+    return null
+  }
+
+  // Map Detrack data to our response format
+  return mapDetrackDataToResponse(detrackData)
+}
+
+/**
+ * Get Detrack status for an order ID (seller workflow)
+ */
+async function getDetrackStatusForOrder(orderId: string, supabase: any): Promise<DetrackStatusResponse | null> {
+  console.log(`Getting Detrack status for order: ${orderId}`)
+
+  // Check if it's a short_id and convert to full UUID if needed
+  let fullOrderId = orderId
+
+  if (isShortId(orderId)) {
+    console.log(`${orderId} appears to be a short_id, looking up full UUID`)
+    const { data: orderData, error: lookupError } = await supabase
       .from("orders")
-      .select("detrack_id, status, is_bulk_order")
-      .eq("id", fullOrderId)
+      .select("id")
+      .eq("short_id", orderId)
       .single()
 
-    console.log(`Order data fetched for ${fullOrderId}:`, orderData)
-    if (orderError) {
-      console.error(`Error fetching order ${fullOrderId}:`, orderError)
-    }
-
-    if (orderError || !orderData) {
-      console.error("Error fetching order:", orderError)
+    if (lookupError || !orderData) {
+      console.error(`Error looking up full UUID for short_id ${orderId}:`, lookupError)
       return null
     }
 
-    // If order is not paid yet, return null
-    if (orderData.status !== "paid") {
-      console.log(`Order ${fullOrderId} is not paid yet (status: ${orderData.status}), returning null`)
-      return null
-    }
+    fullOrderId = orderData.id
+    console.log(`Converted short_id ${orderId} to full UUID ${fullOrderId}`)
+  }
 
-    // Check if this is a bulk order with multiple Detrack jobs
-    if (orderData.is_bulk_order && orderData.detrack_id === "BULK_ORDER_MULTIPLE_JOBS") {
-      // For bulk orders, we need to fetch the first parcel's Detrack job ID
-      const { data: parcelData, error: parcelError } = await supabase
-        .from("parcels")
-        .select("id, detrack_job_id")
-        .eq("order_id", fullOrderId)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .single()
+  // Fetch the order to get the Detrack ID using the full UUID
+  const { data: orderData, error: orderError } = await supabase
+    .from("orders")
+    .select("detrack_id, status, is_bulk_order")
+    .eq("id", fullOrderId)
+    .single()
 
-      if (parcelError || !parcelData || !parcelData.detrack_job_id) {
-        console.log(`No parcels with Detrack job IDs found for bulk order ${fullOrderId}`)
-        // Use Singapore time for timestamps
-        const now = new Date()
-        // Format in ISO string but ensure it's in Singapore time (UTC+8)
-        const sgTime = new Date(now.getTime()).toISOString()
+  console.log(`Order data fetched for ${fullOrderId}:`, orderData)
+  if (orderError) {
+    console.error(`Error fetching order ${fullOrderId}:`, orderError)
+  }
 
-        return {
-          status: "detrack_missing",
-          trackingStatus: "Tracking ID Missing",
-          milestones: [
-            {
-              name: "Order Received",
-              status: "completed",
-              timestamp: sgTime,
-              description: "Your order has been received and is being processed",
-            },
-            {
-              name: "Tracking Setup",
-              status: "current",
-              timestamp: null,
-              description: "Waiting for tracking ID to be assigned",
-            },
-            {
-              name: "Out for Delivery",
-              status: "upcoming",
-              timestamp: null,
-              description: "Your order will be out for delivery soon",
-            },
-            {
-              name: "Delivered",
-              status: "upcoming",
-              timestamp: null,
-              description: "Your order will be delivered soon",
-            },
-          ],
-          lastUpdated: sgTime,
-        }
-      }
+  if (orderError || !orderData) {
+    console.error("Error fetching order:", orderError)
+    return null
+  }
 
-      // Use the parcel's detrack_job_id to fetch status from Detrack API
-      const detrackId = parcelData.detrack_job_id
+  // If order is not paid yet, return null
+  if (orderData.status !== "paid") {
+    console.log(`Order ${fullOrderId} is not paid yet (status: ${orderData.status}), returning null`)
+    return null
+  }
 
-      // Check if Detrack API URL is configured
-      if (!detrackConfig.apiUrl) {
-        console.error("Detrack API URL is not configured")
-        return null
-      }
+  // Check if this is a bulk order with multiple Detrack jobs
+  if (orderData.is_bulk_order && orderData.detrack_id === "BULK_ORDER_MULTIPLE_JOBS") {
+    return handleBulkOrder(fullOrderId, supabase)
+  } else if (!orderData.detrack_id) {
+    console.log(`Order ${fullOrderId} does not have a Detrack ID yet, returning custom error status`)
+    return createPlaceholderStatus()
+  }
 
-      // Fetch the delivery status from Detrack using the detrack_job_id
-      const baseUrl = detrackConfig.apiUrl
-      const apiUrl = `${baseUrl}/${detrackId}`
-      console.log(`Fetching Detrack status from: ${apiUrl}`)
+  // For regular orders with a Detrack ID, fetch from Detrack API
+  const detrackData = await fetchDetrackStatus(fullOrderId)
+  if (!detrackData) {
+    return null
+  }
 
-      const response = await fetch(apiUrl, {
-        method: "GET",
-        headers: createDetrackHeaders(),
-        next: { revalidate: 60 }, // Cache for 1 minute
-      })
+  // Map Detrack data to our response format
+  return mapDetrackDataToResponse(detrackData)
+}
 
-      console.log(`Detrack API response status for ${detrackId}: ${response.status} ${response.statusText}`)
+/**
+ * Handle bulk orders with multiple Detrack jobs
+ */
+async function handleBulkOrder(orderId: string, supabase: any): Promise<DetrackStatusResponse | null> {
+  console.log(`Handling bulk order: ${orderId}`)
 
-      if (!response.ok) {
-        console.error(`Detrack API error: ${response.status} ${response.statusText}`)
-        return null
-      }
+  // For bulk orders, we need to fetch the first parcel's Detrack job ID
+  const { data: parcelData, error: parcelError } = await supabase
+    .from("parcels")
+    .select("id, detrack_job_id")
+    .eq("order_id", orderId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .single()
 
-      const detrackResponse = await response.json()
-      console.log(`Detrack API response for order ${fullOrderId}:`, JSON.stringify(detrackResponse, null, 2))
+  if (parcelError || !parcelData || !parcelData.detrack_job_id) {
+    console.log(`No parcels with Detrack job IDs found for bulk order ${orderId}`)
+    return createPlaceholderStatus()
+  }
 
-      const detrackData = detrackResponse.data
+  // Use the parcel's detrack_job_id to fetch status from Detrack API
+  const detrackId = parcelData.detrack_job_id
 
-      if (!detrackData) {
-        console.error("No data returned from Detrack API")
-        return null
-      }
+  // Fetch from Detrack API
+  const detrackData = await fetchDetrackStatus(detrackId)
+  if (!detrackData) {
+    return null
+  }
 
-      // Map Detrack status to our format
-      const milestones: Array<{
-        name: string
-        status: "completed" | "current" | "upcoming"
-        timestamp: string | null
-        description: string
-      }> = [
-        {
-          name: "Order Received",
-          status: "completed",
-          timestamp: detrackData.info_received_at || new Date().toISOString(),
-          description: "Your order has been received and is being processed",
-        },
-        {
-          name: "Preparing for Shipment",
-          status: "upcoming",
-          timestamp: detrackData.scheduled_at,
-          description: "Your order is being prepared for shipment",
-        },
-        {
-          name: "Out for Delivery",
-          status: "upcoming",
-          timestamp: detrackData.out_for_delivery_at,
-          description: "Your order is out for delivery",
-        },
-        {
-          name: "Delivered",
-          status: "upcoming",
-          timestamp: detrackData.pod_at,
-          description: "Your order has been delivered",
-        },
-      ]
+  // Map Detrack data to our response format
+  return mapDetrackDataToResponse(detrackData)
+}
 
-      // Update milestone statuses based on timestamps
-      let currentMilestoneFound = false
-      for (let i = milestones.length - 1; i >= 0; i--) {
-        if (milestones[i].timestamp) {
-          if (!currentMilestoneFound) {
-            milestones[i].status = "completed"
-          }
-        } else if (!currentMilestoneFound && i > 0 && milestones[i - 1].timestamp) {
-          milestones[i].status = "current"
-          currentMilestoneFound = true
-        }
-      }
+/**
+ * Fetch status from Detrack API
+ */
+async function fetchDetrackStatus(detrackId: string): Promise<any | null> {
+  // Check if Detrack API URL is configured
+  if (!detrackConfig.apiUrl) {
+    console.error("Detrack API URL is not configured")
+    return null
+  }
 
-      // Use current time for lastUpdated
-      const now = new Date().toISOString()
+  // Fetch the delivery status from Detrack
+  const baseUrl = detrackConfig.apiUrl
+  const apiUrl = `${baseUrl}/${detrackId}`
+  console.log(`Fetching Detrack status from: ${apiUrl}`)
 
-      return {
-        status: detrackData.status || "processing",
-        trackingStatus: detrackData.tracking_status || "Order received",
-        milestones,
-        lastUpdated: now,
-      }
-    } else if (!orderData.detrack_id) {
-      console.log(`Order ${fullOrderId} does not have a Detrack ID yet, returning custom error status`)
-      // Use Singapore time for timestamps
-      const now = new Date()
-      // Format in ISO string but ensure it's in Singapore time (UTC+8)
-      const sgTime = new Date(now.getTime()).toISOString()
+  // And add a log to clarify what ID we're using:
+  console.log(`Using ID for Detrack API call: ${detrackId} (this should be our internal UUID, not a Detrack ID)`)
 
-      return {
-        status: "detrack_missing",
-        trackingStatus: "Tracking ID Missing",
-        milestones: [
-          {
-            name: "Order Received",
-            status: "completed",
-            timestamp: sgTime,
-            description: "Your order has been received and is being processed",
-          },
-          {
-            name: "Tracking Setup",
-            status: "current",
-            timestamp: null,
-            description: "Waiting for tracking ID to be assigned",
-          },
-          {
-            name: "Out for Delivery",
-            status: "upcoming",
-            timestamp: null,
-            description: "Your order will be out for delivery soon",
-          },
-          {
-            name: "Delivered",
-            status: "upcoming",
-            timestamp: null,
-            description: "Your order will be delivered soon",
-          },
-        ],
-        lastUpdated: sgTime,
-      }
-    }
-
-    // Check if Detrack API URL is configured
-    if (!detrackConfig.apiUrl) {
-      console.error("Detrack API URL is not configured")
-      return null
-    }
-
-    // Fetch the delivery status from Detrack using the DO number
-    const baseUrl = detrackConfig.apiUrl
-    const apiUrl = `${baseUrl}/${fullOrderId}` // Use the full UUID as the DO number
-    console.log(`Fetching Detrack status from: ${apiUrl}`)
-
+  try {
     const response = await fetch(apiUrl, {
       method: "GET",
       headers: createDetrackHeaders(),
       next: { revalidate: 60 }, // Cache for 1 minute
     })
 
-    console.log(`Detrack API response status for ${fullOrderId}: ${response.status} ${response.statusText}`)
+    console.log(`Detrack API response status for ${detrackId}: ${response.status} ${response.statusText}`)
 
     if (!response.ok) {
       console.error(`Detrack API error: ${response.status} ${response.statusText}`)
@@ -420,7 +237,7 @@ export async function getDetrackStatus(idParam: string): Promise<DetrackStatusRe
     }
 
     const detrackResponse = await response.json()
-    console.log(`Detrack API response for order ${fullOrderId}:`, JSON.stringify(detrackResponse, null, 2))
+    console.log(`Detrack API response for ${detrackId}:`, JSON.stringify(detrackResponse, null, 2))
 
     const detrackData = detrackResponse.data
 
@@ -429,67 +246,113 @@ export async function getDetrackStatus(idParam: string): Promise<DetrackStatusRe
       return null
     }
 
-    console.log(`Detrack data for order ${fullOrderId}:`, JSON.stringify(detrackData, null, 2))
-
-    // Map Detrack status to our format
-    const milestones: Array<{
-      name: string
-      status: "completed" | "current" | "upcoming"
-      timestamp: string | null
-      description: string
-    }> = [
-      {
-        name: "Order Received",
-        status: "completed",
-        timestamp: detrackData.info_received_at || new Date().toISOString(),
-        description: "Your order has been received and is being processed",
-      },
-      {
-        name: "Preparing for Shipment",
-        status: "upcoming",
-        timestamp: detrackData.scheduled_at,
-        description: "Your order is being prepared for shipment",
-      },
-      {
-        name: "Out for Delivery",
-        status: "upcoming",
-        timestamp: detrackData.out_for_delivery_at,
-        description: "Your order is out for delivery",
-      },
-      {
-        name: "Delivered",
-        status: "upcoming",
-        timestamp: detrackData.pod_at,
-        description: "Your order has been delivered",
-      },
-    ]
-
-    // Update milestone statuses based on timestamps
-    let currentMilestoneFound = false
-    for (let i = milestones.length - 1; i >= 0; i--) {
-      if (milestones[i].timestamp) {
-        if (!currentMilestoneFound) {
-          milestones[i].status = "completed"
-        }
-      } else if (!currentMilestoneFound && i > 0 && milestones[i - 1].timestamp) {
-        milestones[i].status = "current"
-        currentMilestoneFound = true
-      }
-    }
-
-    // Use current time for lastUpdated instead of relying on Detrack's updated_at
-    // This ensures the time is consistent with our system
-    const now = new Date().toISOString()
-
-    return {
-      status: detrackData.status || "processing",
-      trackingStatus: detrackData.tracking_status || "Order received",
-      milestones,
-      lastUpdated: now,
-    }
+    return detrackData
   } catch (error) {
-    console.error("Error fetching Detrack status:", error)
+    console.error(`Error fetching from Detrack API for ${detrackId}:`, error)
     return null
   }
 }
 
+/**
+ * Map Detrack data to our response format
+ */
+function mapDetrackDataToResponse(detrackData: any): DetrackStatusResponse {
+  console.log(`Mapping Detrack data to response:`, JSON.stringify(detrackData, null, 2))
+
+  // Map Detrack status to our format
+  const milestones: Array<{
+    name: string
+    status: "completed" | "current" | "upcoming"
+    timestamp: string | null
+    description: string
+  }> = [
+    {
+      name: "Order Received",
+      status: "completed",
+      timestamp: detrackData.info_received_at || new Date().toISOString(),
+      description: "Your order has been received and is being processed",
+    },
+    {
+      name: "Preparing for Shipment",
+      status: "upcoming",
+      timestamp: detrackData.scheduled_at,
+      description: "Your order is being prepared for shipment",
+    },
+    {
+      name: "Out for Delivery",
+      status: "upcoming",
+      timestamp: detrackData.out_for_delivery_at,
+      description: "Your order is out for delivery",
+    },
+    {
+      name: "Delivered",
+      status: "upcoming",
+      timestamp: detrackData.pod_at,
+      description: "Your order has been delivered",
+    },
+  ]
+
+  // Update milestone statuses based on timestamps
+  let currentMilestoneFound = false
+  for (let i = milestones.length - 1; i >= 0; i--) {
+    if (milestones[i].timestamp) {
+      if (!currentMilestoneFound) {
+        milestones[i].status = "completed"
+      }
+    } else if (!currentMilestoneFound && i > 0 && milestones[i - 1].timestamp) {
+      milestones[i].status = "current"
+      currentMilestoneFound = true
+    }
+  }
+
+  // Use current time for lastUpdated
+  const now = new Date().toISOString()
+
+  return {
+    status: detrackData.status || "processing",
+    trackingStatus: detrackData.tracking_status || "Order received",
+    milestones,
+    lastUpdated: now,
+  }
+}
+
+/**
+ * Create a placeholder status for orders/parcels without Detrack IDs
+ */
+function createPlaceholderStatus(): DetrackStatusResponse {
+  // Use Singapore time for timestamps
+  const now = new Date()
+  const sgTime = new Date(now.getTime()).toISOString()
+
+  return {
+    status: "detrack_missing",
+    trackingStatus: "Tracking ID Missing",
+    milestones: [
+      {
+        name: "Order Received",
+        status: "completed",
+        timestamp: sgTime,
+        description: "Your order has been received and is being processed",
+      },
+      {
+        name: "Tracking Setup",
+        status: "current",
+        timestamp: null,
+        description: "Waiting for tracking ID to be assigned",
+      },
+      {
+        name: "Out for Delivery",
+        status: "upcoming",
+        timestamp: null,
+        description: "Your order will be out for delivery soon",
+      },
+      {
+        name: "Delivered",
+        status: "upcoming",
+        timestamp: null,
+        description: "Your order will be delivered soon",
+      },
+    ],
+    lastUpdated: sgTime,
+  }
+}

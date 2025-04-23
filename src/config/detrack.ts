@@ -30,7 +30,7 @@ export function convertOrderToDetrackJob(order: OrderWithParcels): DetrackJob {
 
     // Order details
     order_number: order.orderNumber,
-    tracking_number: order.orderNumber, // Use order number as tracking number
+    tracking_number: order.trackingNumber || order.orderNumber, // Use tracking number (short_id) if available, otherwise fall back to order number
 
     // Contact details
     deliver_to_collect_from: order.recipientName,

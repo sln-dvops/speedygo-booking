@@ -4,6 +4,7 @@ import { Package, PackageIcon as Packages } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { OrderSearch } from "@/components/ordering/shared/OrderSearch"
+import { ParcelSearch } from "@/components/ordering/shared/ParcelSearch"
 
 type OrderType = "individual" | "bulk"
 
@@ -61,6 +62,7 @@ export function OrderTypeSelection({ onNextStep }: OrderTypeSelectionProps) {
         </div>
 
         <OrderSearch />
+        <ParcelSearch />
       </CardContent>
     </Card>
   )

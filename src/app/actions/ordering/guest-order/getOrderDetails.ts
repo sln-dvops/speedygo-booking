@@ -55,6 +55,8 @@ export async function getOrderDetails(orderIdOrShortId: string): Promise<OrderWi
       height: parcel.height,
       effectiveWeight: Math.max(parcel.weight, (parcel.length * parcel.width * parcel.height) / 5000),
       pricingTier: parcel.pricing_tier, // Include the pricing tier
+      id: parcel.id, // Include the parcel ID
+      short_id: parcel.short_id, // Include the parcel short_id
     }))
 
     // Format recipient details for bulk orders
@@ -112,4 +114,3 @@ export async function getOrderDetails(orderIdOrShortId: string): Promise<OrderWi
     return null
   }
 }
-

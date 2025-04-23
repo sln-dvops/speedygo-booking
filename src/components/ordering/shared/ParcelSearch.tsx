@@ -8,13 +8,13 @@ import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { validateOrderId } from "@/utils/orderIdUtils"
 
-export function OrderSearch() {
+export function ParcelSearch() {
   const router = useRouter()
-  const [orderNumber, setOrderNumber] = useState("")
+  const [parcelNumber, setParcelNumber] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Function to validate and format order number
+  // Function to validate and format parcel number
   const handleSearch = () => {
     // Reset error
     setError(null)
@@ -23,17 +23,17 @@ export function OrderSearch() {
     setIsLoading(true)
 
     try {
-      // Validate the order ID
-      const validOrderId = validateOrderId(orderNumber)
+      // Validate the parcel ID (using the same validation as order IDs)
+      const validParcelId = validateOrderId(parcelNumber)
 
-      if (!validOrderId) {
-        setError("Please enter a valid order number")
+      if (!validParcelId) {
+        setError("Please enter a valid parcel number")
         setIsLoading(false)
         return
       }
 
-      // Navigate to the order page
-      router.push(`/order/${validOrderId}`)
+      // Navigate to the parcel page
+      router.push(`/parcel/${validParcelId}`)
 
       // Note: router.push doesn't return a Promise in Next.js
       // The loading state will be reset when the new page loads
@@ -54,17 +54,15 @@ export function OrderSearch() {
 
   return (
     <div className="bg-yellow-100 p-6 rounded-lg">
-      <h4 className="font-medium text-black mb-3">For Sellers</h4>
-      <p className="text-sm text-gray-600 mb-4">
-        Enter your order ID below to check waybill and delivery status.
-      </p>
+      <h4 className="font-medium text-black mb-3">For Recipients</h4>
+      <p className="text-sm text-gray-600 mb-4">Enter your parcel ID below to check delivery status.</p>
 
       <div className="flex gap-2">
         <div className="flex-1">
           <Input
-            placeholder="Enter order number (e.g., 6186e845c23f or full UUID)"
-            value={orderNumber}
-            onChange={(e) => setOrderNumber(e.target.value)}
+            placeholder="Enter parcel number (e.g., 6186e845c23f or full UUID)"
+            value={parcelNumber}
+            onChange={(e) => setParcelNumber(e.target.value)}
             className="border-black"
           />
         </div>
@@ -91,4 +89,3 @@ export function OrderSearch() {
     </div>
   )
 }
-

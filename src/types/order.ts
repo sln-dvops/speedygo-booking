@@ -84,7 +84,8 @@ export interface HitPayResponse {
 
 export interface OrderWithParcels {
   orderNumber: string
-  shortId?: string // Add this field to include the short_id
+  shortId?: string
+  trackingNumber?: string // Add this field for Detrack tracking number
   senderName: string
   senderAddress: string
   senderContactNumber: string
@@ -136,4 +137,3 @@ export interface AddressFormData {
   postalCode: string
   recipients?: RecipientDetails[] // Add this line
 }
-

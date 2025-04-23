@@ -100,7 +100,8 @@ export function Waybill({ orderDetails }: WaybillProps) {
   // Get current recipient for bulk orders
   const getCurrentRecipient = (): RecipientDetails | null => {
     if (!isBulkOrder || !orderDetails.recipients) return null
-    return orderDetails.recipients.find((r) => r.parcelIndex === currentWaybillIndex) || null
+    const recipient = orderDetails.recipients.find((r) => r.parcelIndex === currentWaybillIndex) || null
+    return recipient
   }
 
   const currentRecipient = getCurrentRecipient()
@@ -254,4 +255,3 @@ export function Waybill({ orderDetails }: WaybillProps) {
     </Card>
   )
 }
-

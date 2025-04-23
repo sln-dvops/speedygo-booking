@@ -24,6 +24,7 @@ interface ParcelData {
   recipient_postal_code: string
   created_at?: string
   detrack_job_id?: string
+  short_id?: string
 }
 
 /**
@@ -223,9 +224,9 @@ export async function createDetrackOrder(
         detrackJob.date = formattedDate
         detrackJob.start_date = formattedDate
 
-        // Use the parcel ID as the DO number and tracking number
+        // Use the parcel ID as the DO number (for API calls) but short_id as the tracking number (for user reference)
         detrackJob.do_number = parcel.id
-        detrackJob.tracking_number = parcel.id
+        detrackJob.tracking_number = parcel.short_id || parcel.id.slice(-12)
 
         // Add reference to the parent order
         detrackJob.order_number = orderId
@@ -355,7 +356,19 @@ export async function createDetrackOrder(
       // For individual orders, create a single Detrack job
       // 7. Convert our order to Detrack job format
       console.log("Creating single Detrack job for individual order")
-      const detrackJob: DetrackJob = convertOrderToDetrackJob(order)
+
+      // Get the first parcel's short_id to use as tracking number
+      const firstParcel = parcelsData[0]
+      const trackingNumber = firstParcel.short_id || firstParcel.id.slice(-12)
+
+      // Create a modified order object with the tracking number and parcel ID as order number
+      const orderWithTracking = {
+        ...order,
+        orderNumber: firstParcel.id, // Use parcel ID as DO number for API calls
+        trackingNumber: trackingNumber, // Use short_id as tracking number for user reference
+      }
+
+      const detrackJob: DetrackJob = convertOrderToDetrackJob(orderWithTracking)
 
       // Set the date in the job to Singapore time
       detrackJob.date = formattedDate

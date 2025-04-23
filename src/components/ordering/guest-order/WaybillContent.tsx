@@ -1,6 +1,6 @@
 "use client"
 
-import { Package } from 'lucide-react'
+import { Package } from "lucide-react"
 import QRCode from "react-qr-code"
 import Barcode from "react-barcode"
 import type { OrderWithParcels, RecipientDetails } from "@/types/order"
@@ -8,7 +8,7 @@ import type { ParcelDimensions } from "@/types/pricing"
 
 interface WaybillContentProps {
   orderDetails: OrderWithParcels
-  parcel: ParcelDimensions & { pricingTier?: string }
+  parcel: ParcelDimensions & { pricingTier?: string; short_id?: string; id?: string }
   recipient?: RecipientDetails | null | undefined
   waybillIndex?: number
 }
@@ -22,8 +22,9 @@ export function WaybillContent({ orderDetails, parcel, recipient }: WaybillConte
     : orderDetails.recipientAddress
   const recipientContact = recipient ? recipient.contactNumber : orderDetails.recipientContactNumber
 
-  // Change the trackingNumber generation to use shortId
-  const trackingNumber = orderDetails.shortId || orderDetails.orderNumber.slice(-12)
+  // Change the trackingNumber generation to use parcel.short_id instead of orderDetails.shortId
+  const trackingNumber =
+    parcel.short_id || parcel.id?.slice(-12) || orderDetails.shortId || orderDetails.orderNumber.slice(-12)
 
   // Get the pricing tier from the parcel or recipient
   const pricingTier = parcel.pricingTier || recipient?.pricingTier || "T1"
@@ -62,7 +63,7 @@ export function WaybillContent({ orderDetails, parcel, recipient }: WaybillConte
           </div>
           <div>
             <span className="font-bold">Address: </span>
-            {orderDetails.senderAddress.replace(/(\d{6})(?:,?\s*Singapore)?$/i, 'Singapore $1')}
+            {orderDetails.senderAddress}
           </div>
           <div>
             <span className="font-bold">Contact: </span>
