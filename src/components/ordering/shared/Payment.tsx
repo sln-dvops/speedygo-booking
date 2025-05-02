@@ -10,7 +10,6 @@ import { createOrder } from "@/app/actions/ordering/guest-order/payment"
 import { calculateShippingPrice } from "@/types/pricing"
 import type { OrderDetails, PartialOrderDetails } from "@/types/order"
 import type { ParcelDimensions, DeliveryMethod } from "@/types/pricing"
-import { PaymentTerms } from "./PaymentTerms"
 
 type PaymentProps = {
   onPrevStep: () => void
@@ -30,6 +29,7 @@ export function Payment({
 }: PaymentProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [termsAccepted, setTermsAccepted] = useState(false)
 
   if (!selectedDimensions || selectedDimensions.length === 0 || !selectedDeliveryMethod) {
     return (
@@ -158,8 +158,27 @@ export function Payment({
           </p>
         </div>
 
-        {/* Add PaymentTerms component here */}
-        <PaymentTerms />
+        {/* Terms and conditions checkbox */}
+        <div className="flex items-start space-x-2">
+          <input
+            type="checkbox"
+            id="terms-checkbox"
+            checked={termsAccepted}
+            onChange={(e) => setTermsAccepted(e.target.checked)}
+            className="mt-1"
+          />
+          <label htmlFor="terms-checkbox" className="text-sm text-gray-600">
+            I have read and agree to the{" "}
+            <a
+              href={process.env.NEXT_PUBLIC_TOC_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              terms and conditions
+            </a>
+          </label>
+        </div>
 
         {error && (
           <div className="bg-red-100 border border-red-300 text-red-700 p-4 rounded-lg">
@@ -172,11 +191,14 @@ export function Payment({
         <Button variant="outline" onClick={onPrevStep} className="border-black text-black hover:bg-yellow-100">
           Back
         </Button>
-        <Button onClick={handlePayment} className="bg-black hover:bg-black/90 text-yellow-400" disabled={isLoading}>
+        <Button
+          onClick={handlePayment}
+          className="bg-black hover:bg-black/90 text-yellow-400"
+          disabled={isLoading || !termsAccepted}
+        >
           {isLoading ? "Processing..." : "Proceed to Payment"}
         </Button>
       </CardFooter>
     </Card>
   )
 }
-
