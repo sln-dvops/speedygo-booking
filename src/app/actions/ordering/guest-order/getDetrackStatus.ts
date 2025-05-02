@@ -29,7 +29,7 @@ export async function getDetrackStatus(idParam: string): Promise<DetrackStatusRe
 
     // Check if the ID is a valid UUID or short_id format
     const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idParam)
-    const isShortIdFormat = /^[0-9a-f]{12}$/i.test(idParam)
+    const isShortIdFormat = /^SPDY[0-9a-f]{12}$/i.test(idParam)
 
     // If it's not a valid UUID or short_id format, it might be a Detrack ID
     // In that case, we need to find the corresponding parcel by detrack_job_id
@@ -37,7 +37,7 @@ export async function getDetrackStatus(idParam: string): Promise<DetrackStatusRe
       console.log(`ID ${idParam} appears to be a Detrack ID, looking for matching parcel`)
       const { data: parcelByDetrackId } = await supabase
         .from("parcels")
-        .select("id, order_id, detrack_job_id, status")
+        .select("id, order_id, short_id, status")
         .eq("detrack_job_id", idParam)
         .maybeSingle()
 
@@ -54,7 +54,7 @@ export async function getDetrackStatus(idParam: string): Promise<DetrackStatusRe
     // Try to find it in the parcels table first
     const { data: parcelData } = await supabase
       .from("parcels")
-      .select("id, order_id, detrack_job_id, status")
+      .select("id, order_id, short_id, status")
       .eq("id", idParam)
       .maybeSingle()
 
@@ -79,14 +79,15 @@ export async function getDetrackStatus(idParam: string): Promise<DetrackStatusRe
 async function getDetrackStatusForParcel(parcelId: string, parcelData: any): Promise<DetrackStatusResponse | null> {
   console.log(`Getting Detrack status for parcel: ${parcelId}`)
 
-  // If the parcel doesn't have a detrack_job_id yet, return a placeholder status
-  if (!parcelData.detrack_job_id) {
-    console.log(`Parcel ${parcelId} does not have a Detrack job ID yet`)
+  // If the parcel doesn't have a short_id yet, return a placeholder status
+  if (!parcelData.short_id) {
+    console.log(`Parcel ${parcelId} does not have a short_id yet`)
     return createPlaceholderStatus()
   }
 
-  // Always use the parcel's internal ID (UUID) for Detrack API calls, not the detrack_job_id
-  const detrackId = parcelId
+  // ONLY use the parcel's short_id for Detrack API calls
+  const detrackId = parcelData.short_id
+  console.log(`Using short_id for Detrack API call: ${detrackId}`)
 
   // Check if Detrack API URL is configured
   if (!detrackConfig.apiUrl) {
@@ -94,7 +95,7 @@ async function getDetrackStatusForParcel(parcelId: string, parcelData: any): Pro
     return null
   }
 
-  // Fetch the delivery status from Detrack using the detrack_job_id
+  // Fetch the delivery status from Detrack using the short_id
   const detrackData = await fetchDetrackStatus(detrackId)
   if (!detrackData) {
     return null
@@ -133,7 +134,7 @@ async function getDetrackStatusForOrder(orderId: string, supabase: any): Promise
   // Fetch the order to get the Detrack ID using the full UUID
   const { data: orderData, error: orderError } = await supabase
     .from("orders")
-    .select("detrack_id, status, is_bulk_order")
+    .select("detrack_id, status, is_bulk_order, short_id")
     .eq("id", fullOrderId)
     .single()
 
@@ -156,13 +157,13 @@ async function getDetrackStatusForOrder(orderId: string, supabase: any): Promise
   // Check if this is a bulk order with multiple Detrack jobs
   if (orderData.is_bulk_order && orderData.detrack_id === "BULK_ORDER_MULTIPLE_JOBS") {
     return handleBulkOrder(fullOrderId, supabase)
-  } else if (!orderData.detrack_id) {
-    console.log(`Order ${fullOrderId} does not have a Detrack ID yet, returning custom error status`)
+  } else if (!orderData.short_id) {
+    console.log(`Order ${fullOrderId} does not have a short_id yet, returning custom error status`)
     return createPlaceholderStatus()
   }
 
-  // For regular orders with a Detrack ID, fetch from Detrack API
-  const detrackData = await fetchDetrackStatus(fullOrderId)
+  // For regular orders, use the order's short_id for Detrack API calls
+  const detrackData = await fetchDetrackStatus(orderData.short_id)
   if (!detrackData) {
     return null
   }
@@ -177,22 +178,23 @@ async function getDetrackStatusForOrder(orderId: string, supabase: any): Promise
 async function handleBulkOrder(orderId: string, supabase: any): Promise<DetrackStatusResponse | null> {
   console.log(`Handling bulk order: ${orderId}`)
 
-  // For bulk orders, we need to fetch the first parcel's Detrack job ID
+  // For bulk orders, we need to fetch the first parcel's short_id
   const { data: parcelData, error: parcelError } = await supabase
     .from("parcels")
-    .select("id, detrack_job_id")
+    .select("id, short_id")
     .eq("order_id", orderId)
     .order("created_at", { ascending: true })
     .limit(1)
     .single()
 
-  if (parcelError || !parcelData || !parcelData.detrack_job_id) {
-    console.log(`No parcels with Detrack job IDs found for bulk order ${orderId}`)
+  if (parcelError || !parcelData || !parcelData.short_id) {
+    console.log(`No parcels with short_id found for bulk order ${orderId}`)
     return createPlaceholderStatus()
   }
 
-  // Use the parcel's detrack_job_id to fetch status from Detrack API
-  const detrackId = parcelData.detrack_job_id
+  // ONLY use the parcel's short_id for Detrack API calls
+  const detrackId = parcelData.short_id
+  console.log(`Using short_id for bulk order Detrack API call: ${detrackId}`)
 
   // Fetch from Detrack API
   const detrackData = await fetchDetrackStatus(detrackId)
@@ -219,8 +221,8 @@ async function fetchDetrackStatus(detrackId: string): Promise<any | null> {
   const apiUrl = `${baseUrl}/${detrackId}`
   console.log(`Fetching Detrack status from: ${apiUrl}`)
 
-  // And add a log to clarify what ID we're using:
-  console.log(`Using ID for Detrack API call: ${detrackId} (this should be our internal UUID, not a Detrack ID)`)
+  // Log what ID we're using for clarity
+  console.log(`Using short_id for Detrack API call: ${detrackId}`)
 
   try {
     const response = await fetch(apiUrl, {
