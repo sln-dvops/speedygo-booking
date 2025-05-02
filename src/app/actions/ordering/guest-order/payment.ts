@@ -57,6 +57,21 @@ export async function createOrder(
     const orderId = orderData.id
     console.log("Generated order ID:", orderId)
 
+    // Fetch the short_id for this order
+    const { data: orderWithShortId, error: shortIdError } = await supabase
+      .from("orders")
+      .select("short_id")
+      .eq("id", orderId)
+      .single()
+
+    if (shortIdError) {
+      console.error("Error fetching short_id:", shortIdError)
+      throw new Error(`Failed to fetch short_id: ${shortIdError.message}`)
+    }
+
+    const orderShortId = orderWithShortId.short_id
+    console.log("Order short ID:", orderShortId)
+
     // 2. If it's a bulk order, create a bulk_orders record
     let bulkOrderId = null
     if (orderDetails.isBulkOrder && parcels.length > 1) {
@@ -155,11 +170,11 @@ export async function createOrder(
     // Create HitPay payment request
     // Update the redirect URL to include the order ID
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
-    const redirectUrl = `${baseUrl}/order/${orderId}`
+    const redirectUrl = `${baseUrl}/order/${orderShortId}`
 
     const hitPayRequestBody = createHitPayRequestBody({
       ...orderDetails,
-      orderNumber: orderId,
+      orderNumber: orderShortId, // Use short_id instead of full UUID
       redirectUrl: redirectUrl, // Override the default redirect URL
     })
 
@@ -189,6 +204,7 @@ ${errorText}`)
     return {
       success: true,
       orderId,
+      orderShortId,
       paymentUrl: hitPayData.url,
     }
   } catch (error) {
@@ -199,4 +215,3 @@ ${errorText}`)
     }
   }
 }
-

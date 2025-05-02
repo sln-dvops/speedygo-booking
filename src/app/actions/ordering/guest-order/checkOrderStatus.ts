@@ -6,7 +6,7 @@ export async function checkOrderStatus(orderId: string) {
   try {
     const supabase = await createClient()
 
-    const { data, error } = await supabase.from("orders").select("status").eq("id", orderId).single()
+    const { data, error } = await supabase.from("orders").select("status").eq("short_id", orderId).single()
 
     if (error) {
       console.error("Error checking order status:", error)
@@ -19,4 +19,3 @@ export async function checkOrderStatus(orderId: string) {
     return null
   }
 }
-

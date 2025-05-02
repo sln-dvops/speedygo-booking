@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const { error, data: orderData } = await supabase
       .from("orders")
       .update({ status: orderStatus })
-      .eq("id", reference_number)
+      .eq("short_id", reference_number)
       .select("is_bulk_order")
       .single()
 

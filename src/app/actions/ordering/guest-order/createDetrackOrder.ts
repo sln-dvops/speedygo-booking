@@ -49,24 +49,31 @@ export async function createDetrackOrder(
     // Initialize Supabase client
     const supabase = await createClient()
 
-    // 1. Fetch the order details
-    const { data: orderData, error: orderError } = await supabase.from("orders").select("*").eq("id", orderId).single()
+    // 1. Fetch the order details - using short_id instead of id
+    const { data: orderData, error: orderError } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("short_id", orderId)
+      .single()
 
     if (orderError || !orderData) {
       console.error("Error fetching order:", orderError)
       return { success: false, message: `Order not found: ${orderError?.message || "Unknown error"}` }
     }
 
+    // Get the full UUID for database operations
+    const fullOrderId = orderData.id
+
     // 2. Check if order is already in Detrack
     if (orderData.detrack_id && !orderData.is_bulk_order) {
       return { success: true, message: "Order already exists in Detrack", detrackId: orderData.detrack_id }
     }
 
-    // 3. Fetch parcels for this order
+    // 3. Fetch parcels for this order - using the full UUID for this query
     const { data: parcelsData, error: parcelsError } = await supabase
       .from("parcels")
       .select("*")
-      .eq("order_id", orderId)
+      .eq("order_id", fullOrderId)
 
     if (parcelsError || !parcelsData || parcelsData.length === 0) {
       console.error("Error fetching parcels:", parcelsError)
@@ -119,7 +126,7 @@ export async function createDetrackOrder(
 
     // 5. Create the OrderWithParcels object
     const order: OrderWithParcels = {
-      orderNumber: orderId,
+      orderNumber: orderId, // Use the short_id for external references
       senderName: orderData.sender_name,
       senderAddress: orderData.sender_address,
       senderContactNumber: orderData.sender_contact_number,
@@ -146,7 +153,7 @@ export async function createDetrackOrder(
       const { data: bulkOrderData, error: bulkOrderError } = await supabase
         .from("bulk_orders")
         .select("*")
-        .eq("order_id", orderId)
+        .eq("order_id", fullOrderId)
         .single()
 
       if (!bulkOrderError && bulkOrderData) {
@@ -203,7 +210,7 @@ export async function createDetrackOrder(
         detrackJob.tracking_number = parcel.short_id || parcel.id.slice(-12)
 
         // Add reference to the parent order
-        detrackJob.order_number = orderId
+        detrackJob.order_number = orderId // Use short_id for external references
 
         try {
           // Send the job to Detrack API
@@ -288,7 +295,7 @@ export async function createDetrackOrder(
         const { error: updateError } = await supabase
           .from("orders")
           .update({ detrack_id: "BULK_ORDER_MULTIPLE_JOBS" })
-          .eq("id", orderId)
+          .eq("id", fullOrderId) // Use full UUID for database operations
 
         if (updateError) {
           console.error("Error updating order with Detrack flag:", updateError)
@@ -407,7 +414,10 @@ export async function createDetrackOrder(
 
         // 11. Update the order with the Detrack ID (we store this as a flag to indicate the order exists in Detrack)
         // Note: For status retrieval, we'll use the order ID (DO number), not this Detrack ID
-        const { error: updateError } = await supabase.from("orders").update({ detrack_id: detrackId }).eq("id", orderId)
+        const { error: updateError } = await supabase
+          .from("orders")
+          .update({ detrack_id: detrackId })
+          .eq("id", fullOrderId) // Use full UUID for database operations
 
         if (updateError) {
           console.error("Error updating order with Detrack ID:", updateError)
