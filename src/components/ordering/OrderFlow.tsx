@@ -23,9 +23,6 @@ export function OrderFlow() {
     <div className="min-h-screen bg-yellow-400">
       <div className="container mx-auto max-w-[800px] px-4">
         <div className="pt-8">
-          <h1 className="text-4xl font-extrabold tracking-tight text-black mb-8">
-            Speedy Xpress: Create a delivery order
-          </h1>
 
           <AnimatePresence mode="wait">
             {orderType === null && (
