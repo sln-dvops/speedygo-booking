@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog"
 
 import type { DeliveryMethod as DeliveryMethodType, ParcelDimensions } from "@/types/pricing"
-import { calculateShippingPrice, PRICING_TIERS, HAND_TO_HAND_FEE } from "@/types/pricing"
+import { calculateShippingPrice, PRICING_TIERS, HAND_TO_HAND_FEE, getPricingTier } from "@/types/pricing"
 
 type DeliveryMethodProps = {
   onPrevStep: () => void
@@ -44,26 +44,26 @@ export function DeliveryMethod({
   const calculatedTotalWeight = selectedDimensions.reduce((sum, parcel) => sum + parcel.weight, 0)
 
   const parcelDetails = selectedDimensions.map((parcel, index) => {
-    const volumetricWeight = (parcel.length * parcel.width * parcel.height) / 5000
-    const effectiveWeight = Math.max(parcel.weight, volumetricWeight)
+    // Use the functions from pricing.ts for calculations
+    const tierInfo = getPricingTier(parcel)
+
+    // Get values from tierInfo
+    const volumetricWeight = tierInfo.volumetricWeight
+
     const basePrice = calculateShippingPrice(parcel, "atl") // Calculate base price without Hand-to-Hand fee
     const handToHandFee = selectedDeliveryMethod === "hand-to-hand" ? HAND_TO_HAND_FEE : 0
     const totalPrice = basePrice + handToHandFee
-    const applicableTier =
-      PRICING_TIERS.find((tier) => effectiveWeight <= tier.maxWeight && volumetricWeight <= tier.maxVolumetric) ||
-      PRICING_TIERS[PRICING_TIERS.length - 1]
-    const tierIndex = PRICING_TIERS.indexOf(applicableTier) + 1
 
     return {
       parcelNumber: index + 1,
       actualWeight: parcel.weight,
+      actualWeightTier: tierInfo.actualWeightTier.name,
       volumetricWeight,
-      effectiveWeight,
+      volumetricWeightTier: tierInfo.volumetricWeightTier.name,
+      effectiveTier: tierInfo.tier.name,
       basePrice,
       handToHandFee,
       totalPrice,
-      applicableTier,
-      tierIndex,
       dimensions: `${parcel.length}cm × ${parcel.width}cm × ${parcel.height}cm`,
     }
   })
@@ -191,35 +191,39 @@ export function DeliveryMethod({
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <p className="font-medium">Dimensions:</p>
-                        <p>{detail.dimensions}</p>
+                    <div className="space-y-4 text-sm">
+                      {/* First row: Dimensions, Actual Weight, Volumetric Weight */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <p className="font-medium">Dimensions:</p>
+                          <p>{detail.dimensions}</p>
+                        </div>
+                        <div>
+                          <p className="font-medium">Actual Weight:</p>
+                          <p>
+                            {detail.actualWeight.toFixed(2)} kg{" "}
+                            <span className="text-xs">({detail.actualWeightTier})</span>
+                          </p>
+                        </div>
+                        <div>
+                          <p className="font-medium">Volumetric Weight:</p>
+                          <p>
+                            {detail.volumetricWeight.toFixed(2)} kg{" "}
+                            <span className="text-xs">({detail.volumetricWeightTier})</span>
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">Actual Weight:</p>
-                        <p>{detail.actualWeight.toFixed(2)} kg</p>
-                      </div>
-                      <div>
-                        <p className="font-medium">Volumetric Weight:</p>
-                        <p>{detail.volumetricWeight.toFixed(2)} kg</p>
-                      </div>
-                      <div>
-                        <p className="font-medium">Effective Weight:</p>
-                        <p>
-                          {detail.effectiveWeight.toFixed(2)} kg
-                          <span className="text-xs ml-1">
-                            ({detail.effectiveWeight === detail.actualWeight ? "Actual" : "Volumetric"})
-                          </span>
-                        </p>
-                      </div>
-                      <div>
+
+                      {/* Second row: Pricing Tier */}
+                      <div className="border-t border-gray-200 pt-2">
                         <p className="font-medium">Pricing Tier:</p>
                         <p>
-                          Tier {detail.tierIndex} (${detail.applicableTier.price.toFixed(2)})
+                          {detail.effectiveTier} ($
+                          {PRICING_TIERS.find((t) => t.name === detail.effectiveTier)?.price.toFixed(2)})
                         </p>
                       </div>
                     </div>
+
                     <div className="mt-4 pt-2 border-t border-gray-200">
                       <div className="flex justify-between items-center">
                         <p className="font-medium">Base Price:</p>
@@ -305,4 +309,3 @@ export function DeliveryMethod({
     </Card>
   )
 }
-

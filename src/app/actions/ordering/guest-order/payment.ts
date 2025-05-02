@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js"
 import { createHitPayRequestBody, HITPAY_API_ENDPOINT } from "@/config/hitpay"
 import type { OrderDetails, HitPayResponse, RecipientDetails } from "@/types/order"
 import type { ParcelDimensions } from "@/types/pricing"
-import { determinePricingTier } from "@/types/pricing"
+import { determinePricingTier, calculateShippingPrice } from "@/types/pricing"
 
 // Create a Supabase client with the service role key for admin operations
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -33,6 +33,24 @@ export async function createOrder(
       throw new Error("Missing required order details")
     }
 
+    // Server-side price validation
+    const serverCalculatedPrice = parcels.reduce((total, parcel) => {
+      return total + calculateShippingPrice(parcel, orderDetails.deliveryMethod)
+    }, 0)
+
+    // Round to 2 decimal places for comparison
+    const clientAmount = Math.round((orderDetails.amount || 0) * 100) / 100
+    const serverAmount = Math.round(serverCalculatedPrice * 100) / 100
+
+    // Check if the client-provided amount matches the server calculation (with small tolerance for floating point issues)
+    if (Math.abs(clientAmount - serverAmount) > 0.01) {
+      console.error(`Price mismatch: Client: ${clientAmount}, Server: ${serverAmount}`)
+      throw new Error(`Invalid price calculation. Expected: $${serverAmount.toFixed(2)}`)
+    }
+
+    // Use the server-calculated price for the order
+    const finalAmount = serverAmount
+
     // 1. Create the main order record
     const { data: orderData, error: orderError } = await supabase
       .from("orders")
@@ -42,7 +60,7 @@ export async function createOrder(
         sender_contact_number: orderDetails.senderContactNumber,
         sender_email: orderDetails.senderEmail,
         delivery_method: orderDetails.deliveryMethod,
-        amount: orderDetails.amount || 0,
+        amount: finalAmount, // Use the validated server-calculated price
         status: "pending",
         is_bulk_order: orderDetails.isBulkOrder || false,
       })
@@ -176,6 +194,7 @@ export async function createOrder(
       ...orderDetails,
       orderNumber: orderShortId, // Use short_id instead of full UUID
       redirectUrl: redirectUrl, // Override the default redirect URL
+      amount: finalAmount, // Use the validated server-calculated price
     })
 
     console.log("HitPay request body:", JSON.stringify(hitPayRequestBody, null, 2))

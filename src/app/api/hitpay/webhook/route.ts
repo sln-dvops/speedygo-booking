@@ -82,19 +82,32 @@ export async function POST(request: NextRequest) {
         const detrackResult = await createDetrackOrder(reference_number)
         console.log(`Detrack order creation result:`, detrackResult)
 
-        // For bulk orders, also update the status of each parcel
-        if (orderData?.is_bulk_order) {
-          console.log(`Updating parcel statuses for bulk order ${reference_number}`)
+        // First, get the full UUID for the order using the short_id
+        const { data: fullOrderData, error: orderLookupError } = await supabase
+          .from("orders")
+          .select("id")
+          .eq("short_id", reference_number)
+          .single()
+
+        if (orderLookupError) {
+          console.error(`Error looking up full order ID for ${reference_number}:`, orderLookupError)
+          // Continue with the webhook response even if this fails
+        } else {
+          // Now use the full UUID to update the parcels
+          const fullOrderId = fullOrderData.id
+          console.log(`Found full order ID ${fullOrderId} for short ID ${reference_number}`)
+
           // Update all parcels for this order to have the same status
+          console.log(`Updating status for all parcels in order ${reference_number}`)
           const { error: parcelUpdateError } = await supabase
             .from("parcels")
             .update({ status: orderStatus })
-            .eq("order_id", reference_number)
+            .eq("order_id", fullOrderId) // Use the full UUID here
 
           if (parcelUpdateError) {
-            console.error(`Error updating parcel statuses for bulk order ${reference_number}:`, parcelUpdateError)
+            console.error(`Error updating parcel statuses for order ${reference_number}:`, parcelUpdateError)
           } else {
-            console.log(`Updated status for all parcels in bulk order ${reference_number}`)
+            console.log(`Updated status for all parcels in order ${reference_number}`)
           }
         }
       } catch (detrackError) {

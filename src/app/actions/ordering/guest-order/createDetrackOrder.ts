@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server"
 import { convertOrderToDetrackJob, createDetrackHeaders, detrackConfig } from "@/config/detrack"
 import type { OrderWithParcels, RecipientDetails } from "@/types/order"
 import type { ParcelDimensions } from "@/types/pricing"
+import { calculateVolumetricWeight, getPricingTier } from "@/types/pricing"
 import type { DetrackJob } from "@/types/detrack"
 
 interface ParcelData {
@@ -95,11 +96,16 @@ export async function createDetrackOrder(
 
     // 4. Convert database data to our internal types
     const parcels: ParcelDimensions[] = parcelsData.map((parcel: ParcelData) => {
-      // Calculate volumetric weight
-      const volumetricWeight = (parcel.length * parcel.width * parcel.height) / 5000
+      // Use the functions from pricing.ts for calculations
+      const volumetricWeight = calculateVolumetricWeight(parcel.length, parcel.width, parcel.height)
 
-      // Use the higher of actual weight and volumetric weight
-      const effectiveWeight = Math.max(parcel.weight, volumetricWeight)
+      // Get the pricing tier information (which includes effectiveWeight)
+      const tierInfo = getPricingTier({
+        weight: parcel.weight,
+        length: parcel.length,
+        width: parcel.width,
+        height: parcel.height,
+      })
 
       return {
         id: parcel.id,
@@ -108,7 +114,8 @@ export async function createDetrackOrder(
         length: parcel.length,
         width: parcel.width,
         height: parcel.height,
-        effectiveWeight,
+        effectiveWeight: Math.max(parcel.weight, volumetricWeight),
+        pricingTier: tierInfo.tier.name,
       }
     })
 

@@ -7,13 +7,14 @@ export interface ParcelDimensions {
   length: number // in cm
   width: number // in cm
   height: number // in cm
-  effectiveWeight: number
+
   id?: string
   short_id?: string
   pricingTier?: string
 }
 
 export interface PricingTier {
+  name: string // T1, T2, T3, T4
   maxWeight: number // in kg
   maxVolumetric: number // in kg/cm³
   price: number // in SGD
@@ -22,27 +23,30 @@ export interface PricingTier {
 // Pricing tiers exactly matching the client's table
 export const PRICING_TIERS: PricingTier[] = [
   {
+    name: "T1",
     maxWeight: 4, // 0kg ≤ 4kg
     maxVolumetric: 2, // 0 kg/cm³ ≤ 2kg/cm³
-    price: 3.5,
+    price: 4.5, // amended
   },
   {
-    maxWeight: 10, // 4kg ≤ 10kg
-    maxVolumetric: 10, // 2 kg/cm³ ≤ 10kg/cm³
+    name: "T2",
+    maxWeight: 10, // 4kg < weight ≤ 10kg
+    maxVolumetric: 10, // 2 kg/cm³ < volumetric ≤ 10kg/cm³
     price: 5.8,
   },
   {
-    maxWeight: 20, // 10kg ≤ 20kg
-    maxVolumetric: 25, // 10 kg/cm³ ≤ 25kg/cm³
+    name: "T3",
+    maxWeight: 20, // 10kg < weight ≤ 20kg
+    maxVolumetric: 25, // 10 kg/cm³ < volumetric ≤ 25kg/cm³
     price: 10.3,
   },
   {
-    maxWeight: 30, // 20kg ≤ 30kg
-    maxVolumetric: Number.POSITIVE_INFINITY, // 25kg/cm³ onwards
+    name: "T4",
+    maxWeight: 30, // 20kg < weight ≤ 30kg
+    maxVolumetric: Number.POSITIVE_INFINITY, // 25kg/cm³ < volumetric
     price: 17.4,
   },
 ]
-
 
 export const HAND_TO_HAND_FEE = 2.5
 
@@ -58,24 +62,81 @@ export const HAND_TO_HAND_FEE = 2.5
  *
  * This is why we divide by 5000 to convert volume in cm³ to equivalent weight in kg.
  */
-export function calculateShippingPrice(dimensions: ParcelDimensions, deliveryMethod: DeliveryMethod): number {
+export function calculateVolumetricWeight(length: number, width: number, height: number): number {
+  return (length * width * height) / 5000
+}
+
+/**
+ * SINGLE SOURCE OF TRUTH for determining the pricing tier based on dimensions
+ * Returns the pricing tier object that should be used for the given dimensions
+ */
+export function getPricingTier(dimensions: ParcelDimensions): {
+  tier: PricingTier
+  actualWeightTier: PricingTier
+  volumetricWeightTier: PricingTier
+  volumetricWeight: number
+} {
   const { weight, length, width, height } = dimensions
 
-  // Calculate volumetric weight (L x W x H / 5000)
-  const volumetricWeight = (length * width * height) / 5000
+  // Calculate volumetric weight
+  const volumetricWeight = calculateVolumetricWeight(length, width, height)
 
-  // Use the higher of actual weight and volumetric weight
-  const effectiveWeight = Math.max(weight, volumetricWeight)
+  // Find applicable pricing tier based on actual weight
+  let actualWeightTier = PRICING_TIERS[PRICING_TIERS.length - 1]
+  for (const tier of PRICING_TIERS) {
+    if (weight <= tier.maxWeight) {
+      actualWeightTier = tier
+      break
+    }
+  }
 
-  // Find applicable pricing tier
-  const tier =
-    PRICING_TIERS.find((tier) => effectiveWeight <= tier.maxWeight && volumetricWeight <= tier.maxVolumetric) ||
-    PRICING_TIERS[PRICING_TIERS.length - 1]
+  // Find applicable pricing tier based on volumetric weight
+  let volumetricWeightTier = PRICING_TIERS[PRICING_TIERS.length - 1]
+  for (const tier of PRICING_TIERS) {
+    if (volumetricWeight <= tier.maxVolumetric) {
+      volumetricWeightTier = tier
+      break
+    }
+  }
+
+  // Use the higher tier (the one with the higher price)
+  const tier = actualWeightTier.price > volumetricWeightTier.price ? actualWeightTier : volumetricWeightTier
+
+  // Log the detailed calculation for debugging
+  console.log(`Pricing calculation:
+    - Actual weight: ${weight}kg (${actualWeightTier.name})
+    - Volumetric weight: ${volumetricWeight.toFixed(2)}kg (${volumetricWeightTier.name})
+    - Effective tier: ${tier.name}
+  `)
+
+  return {
+    tier,
+    actualWeightTier,
+    volumetricWeightTier,
+    volumetricWeight,
+  }
+}
+
+/**
+ * Calculate the shipping price based on dimensions and delivery method
+ */
+export function calculateShippingPrice(dimensions: ParcelDimensions, deliveryMethod: DeliveryMethod): number {
+  // Get the pricing tier using our single source of truth
+  const { tier } = getPricingTier(dimensions)
 
   // Add hand-to-hand fee if selected
   const handToHandFee = deliveryMethod === "hand-to-hand" ? HAND_TO_HAND_FEE : 0
 
   return tier.price + handToHandFee
+}
+
+/**
+ * Determine the pricing tier name (T1, T2, T3, T4) based on parcel dimensions
+ */
+export function determinePricingTier(dimensions: ParcelDimensions): string {
+  // Get the pricing tier using our single source of truth
+  const { tier } = getPricingTier(dimensions)
+  return tier.name
 }
 
 /**
@@ -85,28 +146,4 @@ export function calculateShippingPrice(dimensions: ParcelDimensions, deliveryMet
 export function calculateVolumetricDensity(length: number, width: number, height: number, weight: number): number {
   const volume = length * width * height // in cm³
   return weight / volume // gives kg/cm³
-}
-
-/**
- * Determine the pricing tier (T1, T2, T3, T4) based on parcel dimensions
- */
-export function determinePricingTier(dimensions: ParcelDimensions): string {
-  const { weight, length, width, height } = dimensions
-
-  // Calculate volumetric weight
-  const volumetricWeight = (length * width * height) / 5000
-
-  // Use the higher of actual weight and volumetric weight
-  const effectiveWeight = Math.max(weight, volumetricWeight)
-
-  // Find applicable pricing tier
-  for (let i = 0; i < PRICING_TIERS.length; i++) {
-    const tier = PRICING_TIERS[i]
-    if (effectiveWeight <= tier.maxWeight && volumetricWeight <= tier.maxVolumetric) {
-      return `T${i + 1}` // T1, T2, T3, T4
-    }
-  }
-
-  // Default to highest tier if no match found
-  return `T${PRICING_TIERS.length}`
 }
