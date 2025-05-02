@@ -1,8 +1,8 @@
--- Create a function to extract the last 12 characters from a UUID
+-- Create a function to extract the last 12 characters from a UUID and add the SPDY prefix
 CREATE OR REPLACE FUNCTION extract_last_12_chars(uuid UUID) 
-RETURNS VARCHAR(12) AS $$
+RETURNS TEXT AS $$
 BEGIN
-  RETURN RIGHT(uuid::text, 12);
+  RETURN 'SPDY' || RIGHT(uuid::text, 12);
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 

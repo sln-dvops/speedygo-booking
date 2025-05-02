@@ -56,13 +56,13 @@ export function OrderSearch() {
     <div className="bg-yellow-100 p-6 rounded-lg">
       <h4 className="font-medium text-black mb-3">For Sellers</h4>
       <p className="text-sm text-gray-600 mb-4">
-        Enter your order ID below to check waybill and delivery status.
+        Search your existing order below to check waybill and delivery status.
       </p>
 
       <div className="flex gap-2">
         <div className="flex-1">
           <Input
-            placeholder="Enter order number (e.g., 6186e845c23f or full UUID)"
+            placeholder="Enter order number (e.g., SPDY6186e845c23f)"
             value={orderNumber}
             onChange={(e) => setOrderNumber(e.target.value)}
             className="border-black"
@@ -91,4 +91,3 @@ export function OrderSearch() {
     </div>
   )
 }
-
