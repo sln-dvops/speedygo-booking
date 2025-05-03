@@ -31,11 +31,15 @@ describe("Individual Order Flow", () => {
     cy.contains("button", "Select Individual").click()
 
     // Step 2: Add parcel details
-    // Generate random dimensions within valid ranges
-    const weight = (Math.random() * 20 + 1).toFixed(1) // 1-21kg
-    const length = Math.floor(Math.random() * 100 + 10) // 10-110cm
-    const width = Math.floor(Math.random() * 80 + 10) // 10-90cm
-    const height = Math.floor(Math.random() * 60 + 10) // 10-70cm
+    // Use specific dimensions that will result in a predictable tier
+    // Weight: 3kg (T1 by weight)
+    // Dimensions: 30cm x 30cm x 15cm = 13,500 cm³
+    // Volumetric weight: 13,500 / 5000 = 2.7kg (T2 by volumetric)
+    // Expected effective tier: T2 (since volumetric tier is higher)
+    const weight = 3
+    const length = 30
+    const width = 30
+    const height = 15
 
     // Fill in parcel dimensions
     cy.get('input[id="weight"]').clear().type(weight.toString())
@@ -54,6 +58,22 @@ describe("Individual Order Flow", () => {
 
     // Step 3: Choose "Authorized to Leave" delivery method
     cy.contains("Authorized to Leave (ATL)").closest("label").click()
+
+    // Check that the pricing tier is correctly displayed
+    cy.contains("Show Details").click()
+
+    // Check actual weight tier
+    cy.contains("Actual Weight:").parent().should("contain", "T1")
+
+    // Check volumetric weight tier
+    cy.contains("Volumetric Weight:").parent().should("contain", "T2")
+
+    // Check effective tier (should be T2 since volumetric is higher)
+    cy.contains("Pricing Tier:").parent().should("contain", "T2")
+
+    // Check that the price matches T2 price ($5.80)
+    cy.contains("Base Price:").parent().should("contain", "$5.80")
+
     cy.contains("button", "Next").click()
 
     // Step 4: Fill in sender information (Singapore address)
@@ -98,6 +118,12 @@ describe("Individual Order Flow", () => {
     cy.contains("Recipient:").next().should("contain", "Jane Recipient")
     cy.contains("Delivery Method:").next().should("contain", "atl")
 
+    // Verify the total price matches our expected T2 price
+    cy.contains("Total Price:").next().should("contain", "$5.80")
+
+    // Check the terms and conditions checkbox
+    cy.get('input[id="terms-checkbox"]').check()
+
     // Click proceed to payment
     cy.log("**Proceeding to HitPay payment**")
 
@@ -110,9 +136,8 @@ describe("Individual Order Flow", () => {
 
       // Wait for redirection to HitPay
       cy.log("**Waiting for HitPay page to load**")
-      
+
       cy.pause()
     })
   })
 })
-

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 import type { ParcelDimensions } from "@/types/pricing"
+import { getPricingTier, calculateVolumetricWeight } from "@/types/pricing"
 
 interface ParcelFormProps {
   currentParcel: ParcelDimensions
@@ -13,8 +14,6 @@ interface ParcelFormProps {
   handleAddParcel: () => void
   isValidDimensions: (dimensions: ParcelDimensions) => boolean
   editingIndex: number | null
-  volumetricWeight: number
-  effectiveWeight: number
 }
 
 export function ParcelForm({
@@ -23,9 +22,21 @@ export function ParcelForm({
   handleAddParcel,
   isValidDimensions,
   editingIndex,
-  volumetricWeight,
-  effectiveWeight,
 }: ParcelFormProps) {
+  // Use the functions from pricing.ts for calculations
+  const showWeightInfo =
+    currentParcel.weight > 0 && currentParcel.length > 0 && currentParcel.width > 0 && currentParcel.height > 0
+
+  // Only calculate if all values are present
+  let tierInfo = null
+  let volumetricWeight = 0
+
+  if (showWeightInfo) {
+    volumetricWeight = calculateVolumetricWeight(currentParcel.length, currentParcel.width, currentParcel.height)
+
+    tierInfo = getPricingTier(currentParcel)
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="space-y-4">
@@ -116,21 +127,26 @@ export function ParcelForm({
           />
         </div>
 
-        {volumetricWeight > 0 && (
+        {showWeightInfo && tierInfo && (
           <div className="bg-yellow-100 p-4 rounded-lg space-y-2 mb-4">
-            <p className="text-sm text-black">
-              <strong>Volumetric Weight:</strong> {volumetricWeight.toFixed(2)} kg
-            </p>
-            <p className="text-sm text-black">
-              <strong>Actual Weight:</strong> {currentParcel.weight.toFixed(2)} kg
-            </p>
-            <p className="text-sm text-black">
-              <strong>Effective Weight:</strong> {effectiveWeight.toFixed(2)} kg
-            </p>
+            <div className="space-y-2">
+              <p className="text-sm text-black">
+                <strong>Actual Weight:</strong> {currentParcel.weight.toFixed(2)} kg{" "}
+                <span className="text-xs">({tierInfo.actualWeightTier.name})</span>
+              </p>
+              <p className="text-sm text-black">
+                <strong>Volumetric Weight:</strong> {volumetricWeight.toFixed(2)} kg{" "}
+                <span className="text-xs">({tierInfo.volumetricWeightTier.name})</span>
+              </p>
+            </div>
+            <div className="border-t border-gray-200 pt-2 mt-2">
+              <p className="text-sm font-medium text-black">
+                <strong>Pricing Tier:</strong> {tierInfo.tier.name} (${tierInfo.tier.price.toFixed(2)})
+              </p>
+            </div>
           </div>
         )}
       </div>
     </div>
   )
 }
-
