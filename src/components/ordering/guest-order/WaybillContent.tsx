@@ -1,6 +1,6 @@
 "use client"
 
-import { Package } from "lucide-react"
+import Image from "next/image"
 import QRCode from "react-qr-code"
 import Barcode from "react-barcode"
 import type { OrderWithParcels, RecipientDetails } from "@/types/order"
@@ -47,8 +47,15 @@ export function WaybillContent({ orderDetails, parcel, recipient }: WaybillConte
       {/* Header */}
       <div className="flex justify-between items-start mb-3 w-full">
         <div className="flex items-center gap-2">
-          <Package className="h-6 w-6" />
-          <span className="text-lg font-bold">SPEEDY XPRESS</span>
+          <div style={{ width: "45px", height: "45px", position: "relative" }}>
+            <Image
+              src="/logo/speedyxpress_logo.png"
+              alt="SpeedyXpress Logo"
+              fill
+              style={{ objectFit: "contain" }}
+              priority
+            />
+          </div>
         </div>
         <span className="text-3xl font-bold">{pricingTier}</span>
       </div>
