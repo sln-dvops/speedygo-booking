@@ -57,8 +57,14 @@ export function OrderDetails({ orderId, initialOrderDetails }: OrderDetailsProps
         <div className="mb-6">
           <p className="text-black mb-2">Your order has been {status === "paid" ? "confirmed" : "received"}.</p>
           <p className="text-black mb-2">
-            Order Number:{" "}
-            <span className="font-semibold">{orderDetails.shortId || orderDetails.orderNumber.slice(-12)}</span>
+            Tracking Number:{" "}
+            <span className="font-semibold">
+  {orderDetails.parcels.length === 1
+    ? orderDetails.parcels[0].short_id
+    : orderDetails.parcels.map(p => p.short_id).join(", ")
+  }
+</span>
+
           </p>
           {status === "paid" ? (
             <p className="text-green-600 font-semibold">Payment Status: Paid</p>

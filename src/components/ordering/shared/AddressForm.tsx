@@ -3,6 +3,8 @@
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { validateSingaporeAddress, type ValidationResult } from "@/utils/addressValidation"
+import { AddressAutocompleteInput } from "./AddressAutoCompleteInput"
+
 
 export interface AddressFormData {
   name: string
@@ -21,6 +23,7 @@ export interface AddressFormProps {
 }
 
 export function AddressForm({
+  
   initialData = {
     name: "",
     contactNumber: "",
@@ -79,116 +82,130 @@ export function AddressForm({
       name === "contactNumber" ? 300 : 100,
     )
   }
+  
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold mb-4">{title}</h3>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="flex flex-col">
-          <label htmlFor="name" className="mb-1 font-medium">
-            Name:
-          </label>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            className={`border ${validationResult.errors.name ? "border-red-500" : "border-gray-300"} rounded-md p-2`}
-          />
-          {validationResult.errors.name && <p className="text-red-500 text-sm mt-1">{validationResult.errors.name}</p>}
-        </div>
-
-        <div className="flex flex-col">
-          <label htmlFor="contactNumber" className="mb-1 font-medium">
-            Contact Number:
-          </label>
-          <input
-            type="text"
-            id="contactNumber"
-            name="contactNumber"
-            value={formData.contactNumber}
-            onChange={handleChange}
-            className={`border ${validationResult.errors.contactNumber ? "border-red-500" : "border-gray-300"} rounded-md p-2`}
-            placeholder="8XXXXXXX"
-          />
-          {validationResult.errors.contactNumber && (
-            <p className="text-red-500 text-sm mt-1">{validationResult.errors.contactNumber}</p>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-col">
-        <label htmlFor="email" className="mb-1 font-medium">
-          Email:
-        </label>
-        <input
-          type="email"
-          id="email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          className={`border ${validationResult.errors.email ? "border-red-500" : "border-gray-300"} rounded-md p-2`}
-        />
-        {validationResult.errors.email && <p className="text-red-500 text-sm mt-1">{validationResult.errors.email}</p>}
-      </div>
-
-      <div className="flex flex-col">
-        <label htmlFor="street" className="mb-1 font-medium">
-          Street Address:
-        </label>
+  <div className="address-form">
+    {/* Name + Phone */}
+    <div className="address-grid two">
+      <div className="field">
         <input
           type="text"
-          id="street"
-          name="street"
-          value={formData.street}
+          name="name"
+          value={formData.name}
           onChange={handleChange}
-          className={`border ${validationResult.errors.street ? "border-red-500" : "border-gray-300"} rounded-md p-2`}
+          placeholder="Name"
+          className={validationResult.errors.name ? "error" : ""}
         />
-        {validationResult.errors.street && (
-          <p className="text-red-500 text-sm mt-1">{validationResult.errors.street}</p>
+        <span>Name</span>
+        {validationResult.errors.name && (
+          <p className="error-text">{validationResult.errors.name}</p>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="flex flex-col">
-          <label htmlFor="unitNo" className="mb-1 font-medium">
-            Unit Number:
-          </label>
-          <input
-            type="text"
-            id="unitNo"
-            name="unitNo"
-            value={formData.unitNo}
-            onChange={handleChange}
-            className={`border ${validationResult.errors.unitNo ? "border-red-500" : "border-gray-300"} rounded-md p-2`}
-            placeholder="#01-01"
-          />
-          {validationResult.errors.unitNo && (
-            <p className="text-red-500 text-sm mt-1">{validationResult.errors.unitNo}</p>
-          )}
-        </div>
-
-        <div className="flex flex-col">
-          <label htmlFor="postalCode" className="mb-1 font-medium">
-            Postal Code:
-          </label>
-          <input
-            type="text"
-            id="postalCode"
-            name="postalCode"
-            value={formData.postalCode}
-            onChange={handleChange}
-            className={`border ${validationResult.errors.postalCode ? "border-red-500" : "border-gray-300"} rounded-md p-2`}
-            placeholder="123456"
-          />
-          {validationResult.errors.postalCode && (
-            <p className="text-red-500 text-sm mt-1">{validationResult.errors.postalCode}</p>
-          )}
-        </div>
+      <div className="field">
+        <input
+          type="text"
+          name="contactNumber"
+          value={formData.contactNumber}
+          onChange={handleChange}
+          placeholder="Phone number"
+          className={validationResult.errors.contactNumber ? "error" : ""}
+        />
+        <span>Phone number</span>
+        {validationResult.errors.contactNumber && (
+          <p className="error-text">{validationResult.errors.contactNumber}</p>
+        )}
       </div>
     </div>
-  )
+
+    {/* Email (FULL WIDTH) */}
+    <div className="address-grid one">
+      <div className="field">
+        <input
+          type="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          placeholder="Email"
+          className={validationResult.errors.email ? "error" : ""}
+        />
+        <span>Email</span>
+        {validationResult.errors.email && (
+          <p className="error-text">{validationResult.errors.email}</p>
+        )}
+      </div>
+    </div>
+
+    {/* Address (FULL WIDTH) */}
+    <div className="address-grid one">
+      <div className="field">
+        <AddressAutocompleteInput
+          value={formData.street}
+          inputClassName={`${
+            validationResult.errors.street ? "error" : ""
+          }`}
+          placeholder="Address"
+          onChange={(val) => {
+            const updated = { ...formData, street: val }
+            setFormData(updated)
+            onDataChange(updated)
+          }}
+          onSelect={(s) => {
+            const updated = {
+              ...formData,
+              street: s.address,
+              postalCode: s.postalCode,
+            }
+
+            setFormData(updated)
+            onDataChange(updated)
+
+            const result = validateSingaporeAddress(updated)
+            setValidationResult(result)
+            onValidityChange(result.isValid)
+          }}
+        />
+        {validationResult.errors.street && (
+          <p className="error-text">{validationResult.errors.street}</p>
+        )}
+      </div>
+    </div>
+
+    {/* Unit + Postal */}
+    <div className="address-grid two">
+      <div className="field">
+        <input
+          type="text"
+          name="unitNo"
+          value={formData.unitNo}
+          onChange={handleChange}
+          placeholder="Unit"
+          className={validationResult.errors.unitNo ? "error" : ""}
+        />
+        <span>Unit</span>
+        {validationResult.errors.unitNo && (
+          <p className="error-text">{validationResult.errors.unitNo}</p>
+        )}
+      </div>
+
+      <div className="field">
+        <input
+          type="text"
+          name="postalCode"
+          value={formData.postalCode}
+          onChange={handleChange}
+          placeholder="Postal code"
+          className={validationResult.errors.postalCode ? "error" : ""}
+        />
+        <span>Postal code</span>
+        {validationResult.errors.postalCode && (
+          <p className="error-text">{validationResult.errors.postalCode}</p>
+        )}
+      </div>
+    </div>
+  </div>
+)
+
 }
 

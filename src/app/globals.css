@@ -5,9 +5,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Poppins", sans-serif;
+  --font-mono: monospace;
 }
+
 
 :root {
   --background: oklch(1 0 0);
@@ -184,3 +185,661 @@
     display: none !important;
   }
 } */
+
+/* ===============================
+   Disable browser autofill styling
+   =============================== */
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: #000;
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* Firefox */
+input:-moz-autofill,
+textarea:-moz-autofill {
+  box-shadow: 0 0 0px 1000px #ffffff inset !important;
+}
+
+/* Parcel Form Layout */
+.parcel-form {
+  /* display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem; */
+  width: 500px;
+  margin: 0 auto;
+  font-family: 'Poppings',sans-serif;
+}
+
+@media (min-width: 768px) {
+  .parcel-form {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.parcel-left {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.parcel-label {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+
+.parcel-input {
+  border: 1px solid #000;
+}
+
+.parcel-dimension-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.parcel-hint {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.parcel-button {
+  width: 100%;
+  background: #ffce1b;
+  color: black;
+  margin-top: 1rem;
+}
+
+.parcel-button:hover {
+  background:#ffc800;
+}
+
+.parcel-right {
+  display: flex;
+  flex-direction: column;
+}
+
+.parcel-image {
+  opacity: 0.8;
+  margin: 0 auto;
+}
+
+/* Pricing / Info Box */
+.parcel-info {
+   background: linear-gradient(
+    180deg,
+    #fefce8,
+    #fef3c7
+  );
+  padding: 15px;
+  border-radius: 14px;
+   /* box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.3); */
+  border: 1px solid #fde68a;
+}
+
+.parcel-info p {
+  font-size: 0.9rem;
+}
+
+.parcel-info-divider {
+  border-top: 1px solid #000000;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+/* Exceeded Limit Warning */
+.parcel-error {
+  background: #fee2e2;
+  border: 1px solid #ef4444;
+  color: #991b1b;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.infoBox {
+  background: linear-gradient(
+    180deg,
+    #fefce8,
+    #fef3c7
+  );
+  padding: 15px;
+  border-radius: 14px;
+   /* box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.3); */
+  border: 1px solid #fde68a;
+}
+
+.infoText {
+  font-size: 0.9rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+/* ===============================
+   Delivery Method – Modern UI
+   =============================== */
+
+.delivery-method-card {
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+/* ---------- Headers ---------- */
+.delivery-method-card h3,
+.delivery-method-card h4 {
+  letter-spacing: -0.01em;
+}
+
+.delivery-method-card .card-title,
+.delivery-method-card h3 {
+  font-weight: 600;
+}
+
+/* ---------- Radio Options ---------- */
+.delivery-method-card label {
+  transition: all 0.2s ease;
+}
+
+.delivery-method-card label:hover {
+  transform: translateY(-1px);
+}
+
+.delivery-method-card label.bg-yellow-200 {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* ---------- Order Summary ---------- */
+.delivery-method-card .bg-yellow-100 {
+  background: linear-gradient(180deg, #fff7cc 0%, #fde68a 100%);
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+}
+
+/* Toggle button */
+.delivery-method-card button[variant="outline"] {
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.delivery-method-card button[variant="outline"]:hover {
+  transform: translateY(-1px);
+}
+
+/* ---------- Parcel Detail Cards ---------- */
+.delivery-method-card .shadow-sm {
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.delivery-method-card .shadow-sm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* Parcel headers */
+.delivery-method-card .shadow-sm h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* ---------- Pricing Blocks ---------- */
+.delivery-method-card .bg-green-100 {
+  background: linear-gradient(180deg, #ecfdf5 0%, #bbf7d0 100%);
+  border-radius: 14px;
+  border: 1px solid #d1fae5;
+}
+
+/* Emphasise totals */
+.delivery-method-card .text-2xl,
+.delivery-method-card .text-xl {
+  letter-spacing: -0.02em;
+}
+
+/* ---------- Badges ---------- */
+.delivery-method-card .badge {
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+/* ---------- Footer ---------- */
+.delivery-method-card .card-footer {
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Primary action */
+.delivery-method-card button.bg-black {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.delivery-method-card button.bg-black:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* ---------- Dialog ---------- */
+.delivery-method-card [role="dialog"] {
+  border-radius: 14px;
+}
+
+/* ---------- Micro polish ---------- */
+.delivery-method-card p {
+  line-height: 1.5;
+}
+
+.delivery-method-card .border-gray-200 {
+  border-color: #e5e7eb;
+}
+
+
+/* ===============================
+   Floating Placeholder Form
+   =============================== */
+
+.address-form {
+  max-width: 920px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Grid */
+.address-grid {
+  display: grid;
+   row-gap: 22px;
+  column-gap: 18px;
+}
+
+.address-grid.two {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.address-grid.one {
+  grid-template-columns: 1fr;
+  margin-top: 6px;
+}
+
+@media (max-width: 768px) {
+  .address-grid.two {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Field wrapper */
+.field {
+  position: relative;
+}
+
+/* Input */
+.field input {
+  width: 100%;
+  height: 56px;
+  padding: 18px 14px 6px;
+  font-size: 0.95rem;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field input::placeholder {
+  color: transparent;
+}
+
+/* Focus */
+.field input:focus {
+  outline: none;
+  border-color: #111827;
+}
+
+/* Floating placeholder */
+.field span {
+  position: absolute;
+  left: 14px;
+  top: 18px;
+  font-size: 0.9rem;
+  color: #000000;
+  pointer-events: none;
+  transition: all 0.15s ease;
+  background: #fff;
+  padding: 0 4px;
+}
+
+/* Float up when typing or focused */
+.field input:focus + span,
+.field input:not(:placeholder-shown) + span {
+  top: 6px;
+  font-size: 0.7rem;
+  color: #6b7280;
+}
+
+/* Error */
+.field input.error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.error-text {
+  font-size: 0.7rem;
+  color: #ef4444;
+  margin-top: 4px;
+}
+.auth-container {
+  max-width: 850px;
+  margin: 80px auto;
+  padding: 36px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.236);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+}
+
+.password-rules {
+  padding-left: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #535353;
+}
+
+.password-rules li {
+  margin-bottom: 4px;
+}
+
+.password-rules li.valid {
+  color: #22c55e; /* green */
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.logo-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.logo-wrapper img {
+  width: 120px;
+  height: auto;
+}
+
+.auth-container h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.95rem;
+  margin-bottom: 26px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-form input {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #929292;
+  font-size: 0.95rem;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: #ffc800;
+  box-shadow: 0 0 0 3px #ffc8002f;
+}
+
+.auth-form button {
+  margin-top: 6px;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: #ffc800;
+  color: black;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.05s;
+}
+
+.auth-form button:hover {
+  transform: translateY(1px);
+   box-shadow: 0 0 0 3px #ffc8002f;
+}
+
+.auth-form button:active {
+  transform: translateY(1px);
+}
+
+.auth-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  margin-top: 14px;
+  color: #dc2626;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 26px 0;
+}
+
+.footer-text {
+  text-align: center;
+  font-size: 1rem;
+  color: #6b7280;
+}
+
+.footer-text span {
+  color: #ffc800;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.footer-text span:hover {
+  text-decoration: underline;
+}
+
+/* 📱 Mobile responsiveness */
+@media (max-width: 480px) {
+  .auth-container {
+    margin: 40px 16px;
+    padding: 28px 22px;
+  }
+
+  .logo-wrapper img {
+    height: 40px;
+  }
+
+  .auth-container h1 {
+    font-size: 1.5rem;
+  }
+}
+
+/* =========================
+   Order Page Header
+   ========================= */
+
+.order-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.order-header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 24px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.order-greeting {
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: black;
+}
+
+.order-greeting span {
+  font-weight: 500;
+}
+
+.order-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dashboard-link {
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 2px solid #ffc800;
+  background-color: #ffc800;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #000000;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+
+.dashboard-link:hover {
+  background: transparent;
+}
+
+.logout-button {
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: grey;
+  border: none;
+  font-size: 0.9rem;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.logout-button:hover {
+  background: #e2e3e4;
+  color: red;
+}
+
+/* =========================
+   Order Page Content
+   ========================= */
+
+.order-page-content {
+  background-color: #ffc800;
+  margin: 0 auto;
+}
+
+/* =========================
+   Mobile adjustments
+   ========================= */
+
+@media (max-width: 640px) {
+  .order-header-inner {
+    padding: 12px 16px;
+  }
+
+  .order-greeting {
+    font-size: 0.85rem;
+  }
+
+  .dashboard-link,
+  .logout-button {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+  }
+
+  .order-page-content {
+    padding: 24px 16px;
+  }
+}
+
+.guest-section {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.guest-button {
+  background: transparent;
+  border: none;
+  font-size: 0.9rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.guest-button:hover {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+
+.create-account-button {
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: #ffc800;
+  color: black;
+  font-size: 1rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s ease, transform 0.05s ease;
+}
+
+.create-account-button:hover {
+  background: #ffc800;
+}
+
+.create-account-button:active {
+  transform: translateY(1px);
+}
+
+.guest-only {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.method-icon img {
+  width: 35px;
+  height: 35px;
+  object-fit: contain;
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+  .method-icon img {
+    margin-bottom: 8px;
+  }
+}

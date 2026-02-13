@@ -49,7 +49,7 @@ export function WaybillContent({ orderDetails, parcel, recipient }: WaybillConte
         <div className="flex items-center gap-2">
           <div style={{ width: "45px", height: "45px", position: "relative" }}>
             <Image
-              src="/logo/speedyxpress_logo.png"
+              src="/images/bwlogo.png"
               alt="SpeedyXpress Logo"
               fill
               style={{ objectFit: "contain" }}

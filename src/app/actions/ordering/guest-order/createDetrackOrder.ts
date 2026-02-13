@@ -4,9 +4,9 @@ import { createClient } from "@/utils/supabase/server"
 import { convertOrderToDetrackJob, createDetrackHeaders, detrackConfig } from "@/config/detrack"
 import type { OrderWithParcels, RecipientDetails } from "@/types/order"
 import type { ParcelDimensions } from "@/types/pricing"
-import { calculateVolumetricWeight, getPricingTier } from "@/types/pricing"
+import {  getPricingTierByWeight } from "@/types/pricing"
 import type { DetrackJob } from "@/types/detrack"
-
+const DETRACK_GROUP_NAME = "SpeedyGo!";
 interface ParcelData {
   id: string
   order_id: string
@@ -95,29 +95,13 @@ export async function createDetrackOrder(
     }
 
     // 4. Convert database data to our internal types
-    const parcels: ParcelDimensions[] = parcelsData.map((parcel: ParcelData) => {
-      // Use the functions from pricing.ts for calculations
-      const volumetricWeight = calculateVolumetricWeight(parcel.length, parcel.width, parcel.height)
-
-      // Get the pricing tier information (which includes effectiveWeight)
-      const tierInfo = getPricingTier({
-        weight: parcel.weight,
-        length: parcel.length,
-        width: parcel.width,
-        height: parcel.height,
-      })
-
-      return {
-        id: parcel.id,
-        short_id: parcel.short_id, // Include short_id in the parcel data
-        weight: parcel.weight,
-        length: parcel.length,
-        width: parcel.width,
-        height: parcel.height,
-        effectiveWeight: Math.max(parcel.weight, volumetricWeight),
-        pricingTier: tierInfo.tier.name,
-      }
-    })
+     // 4. Convert database data to our internal types
+    const parcels: ParcelDimensions[] = parcelsData.map((parcel: ParcelData) => ({
+  id: parcel.id,
+  short_id: parcel.short_id,
+  weight: parcel.weight,
+  pricingTier: parcel.pricing_tier ?? getPricingTierByWeight(parcel.weight).name,
+}))
 
     // Create recipients array for bulk orders
     const recipients: RecipientDetails[] = parcelsData.map((parcel: ParcelData, index: number) => ({
@@ -193,7 +177,7 @@ export async function createDetrackOrder(
         const parcelOrder = {
           ...order,
           // Use the parcel's short_id as the order number for Detrack
-          orderNumber: parcel.short_id || `SPDY${parcel.id.slice(-12)}`,
+          orderNumber: parcel.short_id || `SPD${parcel.id.slice(-12)}`,
           // Use this specific parcel's recipient details
           recipientName: parcel.recipient_name,
           recipientAddress: parcel.recipient_address,
@@ -214,8 +198,8 @@ export async function createDetrackOrder(
         detrackJob.start_date = formattedDate
 
         // Use the parcel's short_id as the DO number for Detrack
-        detrackJob.do_number = parcel.short_id || `SPDY${parcel.id.slice(-12)}`
-        detrackJob.tracking_number = parcel.short_id || `SPDY${parcel.id.slice(-12)}`
+        detrackJob.do_number = parcel.short_id || `SPD${parcel.id.slice(-12)}`
+        detrackJob.tracking_number = parcel.short_id || `SPD${parcel.id.slice(-12)}`
 
         // Add reference to the parent order
         detrackJob.order_number = orderId // Use short_id for external references
@@ -329,7 +313,7 @@ export async function createDetrackOrder(
 
       // Get the first parcel's short_id to use as tracking number
       const firstParcel = parcelsData[0]
-      const trackingNumber = firstParcel.short_id || `SPDY${firstParcel.id.slice(-12)}`
+      const trackingNumber = firstParcel.short_id || `SPD${firstParcel.id.slice(-12)}`
 
       // Create a modified order object with the tracking number and parcel ID as order number
       const orderWithTracking = {

@@ -5,7 +5,8 @@ export const HITPAY_API_ENDPOINT =
     : "https://api.sandbox.hit-pay.com/v1/payment-requests"
 
 export const HITPAY_WEBHOOK_PATH = "/api/hitpay/webhook"
-export const HITPAY_SUCCESS_PATH = "/api/payment/success"
+// export const HITPAY_SUCCESS_PATH = "/api/payment/success"
+export const HITPAY_SUCCESS_PATH = "/order"
 
 export function createHitPayRequestBody(orderDetails: any) {
   // Get the base URL from environment variable

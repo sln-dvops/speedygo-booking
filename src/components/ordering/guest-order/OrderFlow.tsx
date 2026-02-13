@@ -2,9 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { OrderTypeSelection } from "@/components/ordering/guest-order/OrderTypeSelection"
-import { ParcelDimensions } from "@/components/ordering/guest-order/ParcelSize"
-import { DeliveryMethod } from "@/components/ordering/guest-order/DeliveryMethod"
 import { SendFrom } from "@/components/ordering/guest-order/SendFrom"
 import { SendTo } from "@/components/ordering/guest-order/SendTo"
 import { Payment } from "@/components/ordering/guest-order/Payment"
@@ -12,6 +9,8 @@ import { Payment } from "@/components/ordering/guest-order/Payment"
 import type { ParcelDimensions as ParcelDimensionsType, DeliveryMethod as DeliveryMethodType } from "@/types/pricing"
 import type { OrderDetails, PartialOrderDetails, RecipientDetails } from "@/types/order"
 import type { AddressFormData } from "@/components/ordering/guest-order/AddressForm"
+import { DeliveryMethod } from "../shared/DeliveryMethod"
+import { ParcelDimensions } from "./ParcelSize"
 
 interface ExtendedAddressFormData extends AddressFormData {
   recipients?: RecipientDetails[]
@@ -148,7 +147,7 @@ export function OrderFlow() {
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <OrderTypeSelection onNextStep={handleOrderTypeSelection} />
+            
                 </motion.div>
               )}
 

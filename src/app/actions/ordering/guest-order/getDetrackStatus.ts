@@ -29,7 +29,7 @@ export async function getDetrackStatus(idParam: string): Promise<DetrackStatusRe
 
     // Check if the ID is a valid UUID or short_id format
     const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idParam)
-    const isShortIdFormat = /^SPDY[0-9a-f]{12}$/i.test(idParam)
+    const isShortIdFormat = /^SPD[0-9a-f]{12}$/i.test(idParam)
 
     // If it's not a valid UUID or short_id format, it might be a Detrack ID
     // In that case, we need to find the corresponding parcel by detrack_job_id

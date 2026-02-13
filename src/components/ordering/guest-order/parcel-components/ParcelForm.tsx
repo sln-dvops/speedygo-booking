@@ -12,20 +12,14 @@ interface ParcelFormProps {
   currentParcel: ParcelDimensions
   handleDimensionChange: (field: keyof ParcelDimensions, value: string) => void
   handleAddParcel: () => void
-  isValidDimensions: (dimensions: ParcelDimensions) => boolean
   editingIndex: number | null
-  volumetricWeight: number
-  effectiveWeight: number
 }
 
 export function ParcelForm({
   currentParcel,
   handleDimensionChange,
   handleAddParcel,
-  isValidDimensions,
-  editingIndex,
-  volumetricWeight,
-  effectiveWeight,
+  editingIndex
 }: ParcelFormProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -99,7 +93,6 @@ export function ParcelForm({
         <Button
           onClick={handleAddParcel}
           className="w-full bg-black hover:bg-black/90 text-yellow-400 mt-4"
-          disabled={!isValidDimensions(currentParcel)}
         >
           {editingIndex !== null ? "Update Parcel" : "Add Parcel"}
         </Button>
@@ -118,20 +111,6 @@ export function ParcelForm({
             <Package className="w-16 h-16 text-black/20" />
           </div>
         </div>
-
-        {volumetricWeight > 0 && (
-          <div className="bg-yellow-100 p-4 rounded-lg space-y-2 mb-4">
-            <p className="text-sm text-black">
-              <strong>Volumetric Weight:</strong> {volumetricWeight.toFixed(2)} kg
-            </p>
-            <p className="text-sm text-black">
-              <strong>Actual Weight:</strong> {currentParcel.weight.toFixed(2)} kg
-            </p>
-            <p className="text-sm text-black">
-              <strong>Effective Weight:</strong> {effectiveWeight.toFixed(2)} kg
-            </p>
-          </div>
-        )}
       </div>
     </div>
   )

@@ -3,11 +3,11 @@
  */
 
 /**
- * Checks if the provided ID is a short ID (12 hexadecimal characters with optional "SPDY" prefix)
+ * Checks if the provided ID is a short ID (12 hexadecimal characters with optional "SPD" prefix)
  */
 export function isShortId(id: string): boolean {
-  // Check for SPDY prefix followed by 12 hex characters
-  if (id.startsWith("SPDY") && id.length === 16 && !/[^a-f0-9]/i.test(id.substring(4))) {
+  // Check for SPD prefix followed by 12 hex characters
+  if (id.startsWith("SPD") && id.length === 16 && !/[^a-f0-9]/i.test(id.substring(4))) {
     return true
   }
   // Also support the original format (just 12 hex characters)
@@ -45,21 +45,21 @@ export function formatUuidWithHyphens(id: string): string {
  * Returns the original ID if it doesn't have the prefix
  */
 export function extractShortId(id: string): string {
-  if (id.startsWith("SPDY") && id.length === 16) {
+  if (id.startsWith("SPD") && id.length === 16) {
     return id.substring(4)
   }
   return id
 }
 
 /**
- * Validates an order ID (accepts short ID with or without SPDY prefix, UUID with hyphens, or UUID without hyphens)
+ * Validates an order ID (accepts short ID with or without SPD prefix, UUID with hyphens, or UUID without hyphens)
  * Returns the formatted ID if valid, or null if invalid
  */
 export function validateOrderId(id: string): string | null {
   // Clean the input (remove spaces and any non-alphanumeric characters except hyphens)
   const cleanedId = id.trim().replace(/[^a-zA-Z0-9-]/g, "")
 
-  // Check if it's a short ID (with or without SPDY prefix)
+  // Check if it's a short ID (with or without SPD prefix)
   if (isShortId(cleanedId)) {
     return cleanedId
   }
@@ -89,16 +89,16 @@ export function getShortIdFromUuid(uuid: string): string {
 }
 
 /**
- * Adds the SPDY prefix to a short ID if it doesn't already have it
+ * Adds the SPD prefix to a short ID if it doesn't already have it
  */
 export function addSpdyPrefix(shortId: string): string {
-  if (shortId.startsWith("SPDY")) {
+  if (shortId.startsWith("SPD")) {
     return shortId
   }
 
   // If it's a 12-character hex string (original short ID format)
   if (shortId.length === 12 && !/[^a-f0-9]/i.test(shortId)) {
-    return `SPDY${shortId}`
+    return `SPD${shortId}`
   }
 
   return shortId
