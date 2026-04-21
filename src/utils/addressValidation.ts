@@ -10,10 +10,9 @@ export const singaporeAddressSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   street: z.string().min(3, "Street address must be at least 3 characters"),
   unitNo: z
-    .string()
-    .regex(/^#?\d{1,3}(-\d{1,3})?$/, "Unit number should be in format #01-01 or 01-01")
-    .optional()
-    .or(z.literal("")),
+  .string()
+  .optional()
+  .or(z.literal("")),
   postalCode: z.string().regex(/^\d{6}$/, "Singapore postal codes must be 6 digits"),
 })
 
