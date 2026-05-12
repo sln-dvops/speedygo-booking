@@ -64,7 +64,6 @@ const {
     // Validate required fields
     if (
       !orderDetails.senderName ||
-      !orderDetails.senderEmail ||
       !orderDetails.deliveryMethod
     ) {
       throw new Error("Missing required order details");
@@ -189,7 +188,7 @@ const {
       let recipientLine1 = orderDetails.recipientLine1;
       let recipientLine2 = orderDetails.recipientLine2 || "";
       let recipientPostalCode = orderDetails.recipientPostalCode;
-
+      let recipientMemo = orderDetails.recipientMemo || "";
       // If this is a bulk order with multiple recipients, use the recipient data for this parcel
       if (orderDetails.isBulkOrder && recipients && recipients.length > 0) {
         const recipient = recipients.find((r) => r.parcelIndex === i);
@@ -200,6 +199,7 @@ const {
           recipientEmail = recipient.email;
           recipientLine1 = recipient.line1;
           recipientLine2 = recipient.line2 || "";
+          recipientMemo = recipient.memo || "";
           recipientPostalCode = recipient.postalCode;
         }
       }
@@ -233,6 +233,7 @@ const {
         recipient_email: recipientEmail,
         recipient_line1: recipientLine1,
         recipient_line2: recipientLine2,
+        recipient_memo:recipientMemo,
         recipient_postal_code: recipientPostalCode,
       });
 
@@ -312,3 +313,78 @@ const {
     };
   }
 }
+
+
+
+// MOCK PAYMENT TESTER CODE ----------------------------------------------------------------------------------------------------
+
+//     // Create HitPay payment request
+//     // Update the redirect URL to include the order ID
+//         // Create HitPay payment request
+//     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+//     const redirectUrl = `${baseUrl}/order/${orderShortId}`;
+
+//     if (process.env.NEXT_PUBLIC_MOCK_PAYMENT === "true") {
+//       console.log("⚠️ MOCK PAYMENT ENABLED");
+
+//       return {
+//         success: true,
+//         orderId,
+//         orderShortId,
+//         paymentUrl: redirectUrl,
+//       };
+//     }
+
+//     const hitPayRequestBody = createHitPayRequestBody({
+//       ...orderDetails,
+//       orderNumber: orderShortId,
+//       redirectUrl,
+//       amount: finalAmount,
+//     });
+
+//     console.log(
+//       "HitPay request body:",
+//       JSON.stringify(hitPayRequestBody, null, 2),
+//     );
+
+//     console.log("Using HitPay API endpoint:", HITPAY_API_ENDPOINT);
+
+//     const hitPayResponse = await fetch(HITPAY_API_ENDPOINT, {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//         "X-BUSINESS-API-KEY": process.env.HITPAY_API_KEY || "",
+//         "X-Requested-With": "XMLHttpRequest",
+//       },
+//       body: JSON.stringify(hitPayRequestBody),
+//     });
+
+//     if (!hitPayResponse.ok) {
+//       const errorText = await hitPayResponse.text();
+
+//       console.error("HitPay API error response:", errorText);
+
+//       throw new Error(
+//         `HitPay API error: ${hitPayResponse.status} ${hitPayResponse.statusText}\n${errorText}`,
+//       );
+//     }
+
+//     const hitPayData: HitPayResponse = await hitPayResponse.json();
+
+//     console.log("HitPay API response:", JSON.stringify(hitPayData, null, 2));
+
+//     return {
+//       success: true,
+//       orderId,
+//       orderShortId,
+//       paymentUrl: hitPayData.url,
+//     };
+//   } catch (error) {
+//     console.error("Order creation failed:", error);
+
+//     return {
+//       success: false,
+//       error: error instanceof Error ? error.message : "Unknown error occurred",
+//     };
+//   }
+// }

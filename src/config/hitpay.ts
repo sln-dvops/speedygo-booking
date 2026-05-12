@@ -37,3 +37,39 @@ export function createHitPayRequestBody(orderDetails: any) {
   }
 }
 
+
+//MOCK PAYMENT TESTER ------------------------------------------------------------------------------------
+
+// const isHitPaySandbox = process.env.HITPAY_ENV === "sandbox"
+
+// export const HITPAY_API_ENDPOINT = isHitPaySandbox
+//   ? "https://api.sandbox.hit-pay.com/v1/payment-requests"
+//   : "https://api.hit-pay.com/v1/payment-requests"
+
+// export function createHitPayRequestBody(orderDetails: any) {
+//   const baseUrl =
+//     process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+
+//   console.log("Using HitPay API endpoint:", HITPAY_API_ENDPOINT)
+
+//   return {
+//     amount: orderDetails.amount,
+//     currency: "SGD",
+//     payment_methods: ["paynow_online"],
+//     email: orderDetails.senderEmail,
+//     name: orderDetails.senderName,
+//     phone: orderDetails.senderContactNumber,
+//     reference_number: orderDetails.orderNumber,
+//     redirect_url:
+//       orderDetails.redirectUrl ??
+//       (() => {
+//         console.warn("⚠️ redirectUrl missing, using fallback")
+//         return `${baseUrl}${HITPAY_SUCCESS_PATH}?orderId=${orderDetails.orderNumber}`
+//       })(),
+//     webhook: `${baseUrl}/api/hitpay/webhook`,
+//     purpose: "Speedy Xpress Delivery Order",
+//     allow_repeated_payments: false,
+//     send_email: true,
+//     send_sms: false,
+//   }
+// }

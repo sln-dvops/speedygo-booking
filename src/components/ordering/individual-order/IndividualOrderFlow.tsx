@@ -29,6 +29,7 @@ export function IndividualOrderFlow({ onBackToSelection }: { onBackToSelection: 
     recipientEmail: "",
     recipientLine1: "",
     recipientLine2: "",
+    recipientMemo:"",
     recipientPostalCode: "",
     parcelSize: "",
     deliveryMethod: undefined,
@@ -87,6 +88,7 @@ export function IndividualOrderFlow({ onBackToSelection }: { onBackToSelection: 
       recipientEmail: data.email,
       recipientLine1: data.street,
       recipientLine2: data.unitNo,
+      recipientMemo: data.memo,
       recipientPostalCode: data.postalCode,
     }))
   }

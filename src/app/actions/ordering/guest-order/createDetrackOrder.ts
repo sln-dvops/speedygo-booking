@@ -22,6 +22,7 @@ interface ParcelData {
   recipient_email: string
   recipient_line1: string
   recipient_line2?: string | null
+  recipient_memo?: string | null
   recipient_postal_code: string
   created_at?: string
   detrack_job_id?: string
@@ -111,6 +112,7 @@ export async function createDetrackOrder(
       address: parcel.recipient_address,
       line1: parcel.recipient_line1,
       line2: parcel.recipient_line2 || "",
+      memo: parcel.recipient_memo ?? "",
       postalCode: parcel.recipient_postal_code,
       parcelIndex: index,
       pricingTier: parcel.pricing_tier,
@@ -130,6 +132,7 @@ export async function createDetrackOrder(
       recipientEmail: parcelsData[0].recipient_email,
       recipientLine1: parcelsData[0].recipient_line1,
       recipientLine2: parcelsData[0].recipient_line2 || undefined,
+      recipientMemo: parcelsData[0].recipient_memo || "",
       recipientPostalCode: parcelsData[0].recipient_postal_code,
       parcelSize: parcelsData[0].parcel_size,
       deliveryMethod: orderData.delivery_method,
@@ -185,6 +188,7 @@ export async function createDetrackOrder(
           recipientEmail: parcel.recipient_email,
           recipientLine1: parcel.recipient_line1,
           recipientLine2: parcel.recipient_line2 || undefined,
+          recipientMemo: parcel.recipient_memo || "",
           recipientPostalCode: parcel.recipient_postal_code,
           // Include only this parcel
           parcels: [parcels[index]],

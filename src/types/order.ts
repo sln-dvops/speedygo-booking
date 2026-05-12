@@ -17,6 +17,7 @@ export interface OrderDetails {
   recipientLine1: string
   recipientLine2?: string
   recipientPostalCode: string
+  recipientMemo?: string;
   amount?: number
   status?: string
   isBulkOrder?: boolean
@@ -34,6 +35,7 @@ export interface RecipientDetails {
   email: string
   line1: string
   line2?: string
+  memo?:string
   postalCode: string
   parcelIndex: number // To link recipient to specific parcel
   pricingTier?: string // Added pricing tier
@@ -96,6 +98,7 @@ export interface OrderWithParcels {
   recipientEmail: string
   recipientLine1: string
   recipientLine2?: string
+  recipientMemo?: string;
   recipientPostalCode: string
   parcelSize: string
   deliveryMethod: string
@@ -107,18 +110,6 @@ export interface OrderWithParcels {
   bulkOrder?: BulkOrderDetails
   totalParcels?: number
   totalWeight?: number
-}
-
-export interface RecipientDetails {
-  name: string
-  address: string
-  contactNumber: string
-  email: string
-  line1: string
-  line2?: string
-  postalCode: string
-  parcelIndex: number
-  pricingTier?: string
 }
 
 export interface BulkOrderDetails {

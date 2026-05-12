@@ -67,6 +67,7 @@ export async function getOrderDetails(orderIdOrShortId: string): Promise<OrderWi
       email: parcel.recipient_email,
       line1: parcel.recipient_line1,
       line2: parcel.recipient_line2 || undefined,
+      memo: parcel.recipient_memo || "",
       postalCode: parcel.recipient_postal_code,
       parcelIndex: index,
       pricingTier: parcel.pricing_tier, // Include the pricing tier
@@ -87,6 +88,7 @@ export async function getOrderDetails(orderIdOrShortId: string): Promise<OrderWi
       recipientEmail: parcels[0].recipient_email,
       recipientLine1: parcels[0].recipient_line1,
       recipientLine2: parcels[0].recipient_line2 || undefined,
+      recipientMemo: parcels[0].recipient_memo || "",
       recipientPostalCode: parcels[0].recipient_postal_code,
       parcelSize: parcels[0].parcel_size, // Add the missing parcelSize property
       deliveryMethod: order.delivery_method,

@@ -31,6 +31,10 @@ export function WaybillContent({
     ? recipient.contactNumber
     : orderDetails.recipientContactNumber;
 
+  const recipientMemo= recipient
+  ?recipient.memo
+  :orderDetails.recipientMemo;
+
   // Change the trackingNumber generation to use parcel.short_id instead of orderDetails.shortId
   const trackingNumber =
     parcel.short_id ||
@@ -69,9 +73,9 @@ const parcelWeight = parcel.weight || 0;
                 />
               </div>
             </td>
-            <td className="w-1-2 text-right">
+            <td className="w-1-2 text-center">
               <QRCode
-                value={trackingNumber}
+                value="https://www.speedyxpress.co/"
                 size={85}
                 style={{
                   height: "auto",
@@ -80,6 +84,9 @@ const parcelWeight = parcel.weight || 0;
                   margin: "0 auto",
                 }}
               />
+              <div className="text-xs mt-2 " style={{ textAlign: "center" }}>
+                Contact us!
+              </div>
             </td>
           </tr>
         </tbody>
@@ -116,7 +123,7 @@ const parcelWeight = parcel.weight || 0;
           </tr>
           <tr>
             <td colSpan={2}>
-              <div className="text-sm">
+              <div className="text-xs">
                 <span className="label-bold">Name: </span> {recipientName}
                 <br />
                 <span className="label-bold">Address: </span> {recipientAddress}
@@ -136,12 +143,18 @@ const parcelWeight = parcel.weight || 0;
           </tr>
           <tr>
             <td colSpan={2}>
-              <div className="text-sm">
+              <div className="text-xs">
                 <span className="label-bold">Name: </span>{" "}
                 {orderDetails.senderName}
                 <br />
                 <span className="label-bold">HP: </span>{" "}
                 {orderDetails.senderContactNumber}
+                {recipientMemo?.trim() && (
+            <>
+              <br />
+              <span className="label-bold">Memo: </span> {recipientMemo}
+            </>
+          )}
               </div>
             </td>
           </tr>
@@ -157,15 +170,15 @@ const parcelWeight = parcel.weight || 0;
                 value={trackingNumber}
                 width={1.5}
                 height={40}
-                fontSize={10}
+                fontSize={12}
                 margin={0}
                 textPosition="bottom"
                 displayValue={true}
               />
             </td>
-            <td className="w-1-2 text-center">
+            <td className="w-1-2 text-right">
               <QRCode
-                value="https://www.speedyxpress.co/"
+                value={trackingNumber}
                 size={85}
                 style={{
                   height: "auto",
@@ -174,9 +187,6 @@ const parcelWeight = parcel.weight || 0;
                   margin: "0 auto",
                 }}
               />
-              <div className="text-xs mt-2 " style={{ textAlign: "center" }}>
-                Contact us!
-              </div>
             </td>
           </tr>
         </tbody>
