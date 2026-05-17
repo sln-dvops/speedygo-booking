@@ -24,9 +24,15 @@ export function convertOrderToDetrackJob(order: OrderWithParcels): DetrackJob {
   // Get the first parcel for individual orders or handle bulk orders
   const firstParcel = order.parcels[0];
 
+   const deliveryType =
+    order.deliveryMethod === "standard"
+      ? "Standard Delivery"
+      : "Next Day Delivery"
+
   // Basic job data
   const job: DetrackJob = {
     type: DetrackJobType.DELIVERY,
+    delivery_type: deliveryType,
     group_id: "699bd5fb1216402394cab205",
     group_name: "SpeedyGo!",
     // Use the order number (which should now be the short_id) as the DO number
@@ -80,11 +86,6 @@ export function convertOrderToDetrackJob(order: OrderWithParcels): DetrackJob {
 
     // Additional details
     instructions: [
-      `Delivery Method: ${
-        order.deliveryMethod === "standard"
-          ? "Standard Delivery"
-          : "Next Day Delivery"
-      }`,
       order.recipientMemo?.trim() ? `Memo: ${order.recipientMemo}` : null,
     ]
       .filter(Boolean)
