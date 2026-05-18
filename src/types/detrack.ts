@@ -108,6 +108,7 @@ export interface DetrackJob {
   // Additional details
   instructions?: string
   service_type?: string
+  delivery_type: string
 
   // Webhook for status updates
   webhook_url?: string

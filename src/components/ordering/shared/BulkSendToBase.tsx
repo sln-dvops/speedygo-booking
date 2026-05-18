@@ -56,6 +56,7 @@ export function BulkSendToBase({
         email: recipient.email,
         street: recipient.line1,
         unitNo: recipient.line2 || "",
+        memo :recipient.memo || "",
         postalCode: recipient.postalCode,
       }))
     }
@@ -67,6 +68,7 @@ export function BulkSendToBase({
         street: "",
         unitNo: "",
         postalCode: "",
+        memo: ""
       }))
     }
     return []
@@ -126,6 +128,7 @@ export function BulkSendToBase({
         line1: "",
         line2: "",
         postalCode: "",
+        memo: "",
         parcelIndex: index,
       }
     }
@@ -140,6 +143,7 @@ export function BulkSendToBase({
       line1: data.street,
       line2: data.unitNo,
       postalCode: data.postalCode,
+      memo: data.memo ?? "",
       parcelIndex: index,
     }
 
@@ -262,6 +266,7 @@ export function BulkSendToBase({
                   onDataChange={(data) => handleAddressChange(index, data)}
                   onValidityChange={(isValid: boolean) => handleValidityChange(index, isValid)}
                   title="Recipient Information"
+                  showMemo={true}
                 />
               </TabsContent>
             ))}

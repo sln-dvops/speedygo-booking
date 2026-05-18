@@ -1,8 +1,12 @@
 /**
  * Detrack API configuration and utility functions
  */
-import { type DetrackConfig, type DetrackJob, DetrackJobType } from "@/types/detrack"
-import type { OrderWithParcels } from "@/types/order"
+import {
+  type DetrackConfig,
+  type DetrackJob,
+  DetrackJobType,
+} from "@/types/detrack";
+import type { OrderWithParcels } from "@/types/order";
 
 /**
  * Detrack API configuration
@@ -11,20 +15,26 @@ export const detrackConfig: DetrackConfig = {
   apiKey: process.env.DETRACK_API_KEY || "",
   apiUrl: process.env.DETRACK_API_URL || "",
   webhookSecret: process.env.DETRACK_WEBHOOK_SECRET,
-}
+};
 
 /**
  * Converts our order data to Detrack job format
  */
 export function convertOrderToDetrackJob(order: OrderWithParcels): DetrackJob {
   // Get the first parcel for individual orders or handle bulk orders
-  const firstParcel = order.parcels[0]
+  const firstParcel = order.parcels[0];
+
+   const deliveryType =
+    order.deliveryMethod === "standard"
+      ? "Standard Delivery"
+      : "Next Day Delivery"
 
   // Basic job data
   const job: DetrackJob = {
     type: DetrackJobType.DELIVERY,
-    "group_id": "699bd5fb1216402394cab205",
-    "group_name": "SpeedyGo!",
+    delivery_type: deliveryType,
+    group_id: "699bd5fb1216402394cab205",
+    group_name: "SpeedyGo!",
     // Use the order number (which should now be the short_id) as the DO number
     do_number: order.orderNumber || "",
     date: new Date().toISOString().split("T")[0], // Today's date in YYYY-MM-DD format
@@ -75,64 +85,82 @@ export function convertOrderToDetrackJob(order: OrderWithParcels): DetrackJob {
     parcel_height: firstParcel.height,
 
     // Additional details
-    instructions: `Delivery Method: ${order.deliveryMethod === "standard" ? "Standard Delivery" : "Next Day Delivery"}`,
+    instructions: [
+      order.recipientMemo?.trim() ? `Memo: ${order.recipientMemo}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n"),
     service_type: order.deliveryMethod === "standard" ? "Standard" : "Premium",
 
     // Webhook for status updates
     webhook_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/detrack/webhook`,
-  }
+  };
 
   // Add items for each parcel
   if (order.parcels.length > 0) {
     job.items = order.parcels.map((parcel, index) => {
-      const recipient = order.recipients?.find((r) => r.parcelIndex === index)
+      const recipient = order.recipients?.find((r) => r.parcelIndex === index);
 
       return {
         description: `Parcel ${index + 1}`,
         quantity: 1,
         weight: parcel.weight,
-        comments: recipient ? `For: ${recipient.name}` : undefined,
-      }
-    })
+        comments: recipient
+          ? [
+              `For: ${recipient.name}`,
+              recipient.memo?.trim() ? `Memo: ${recipient.memo}` : null,
+            ]
+              .filter(Boolean)
+              .join("\n")
+          : undefined,
+      };
+    });
   }
 
-  return job
+  return job;
 }
 
 // Add a retry mechanism to the createDetrackHeaders function
 export function createDetrackHeaders(): HeadersInit {
   // Check if API key is available
   if (!detrackConfig.apiKey) {
-    console.error("Detrack API key is missing or empty")
+    console.error("Detrack API key is missing or empty");
   }
 
   return {
     "Content-Type": "application/json",
     "X-API-KEY": detrackConfig.apiKey,
-  }
+  };
 }
 
 // Add a helper function to retry failed API calls
-export async function retryDetrackApiCall<T>(apiCall: () => Promise<T>, maxRetries = 3, delayMs = 1000): Promise<T> {
-  let lastError: any
+export async function retryDetrackApiCall<T>(
+  apiCall: () => Promise<T>,
+  maxRetries = 3,
+  delayMs = 1000,
+): Promise<T> {
+  let lastError: any;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`Detrack API call attempt ${attempt}/${maxRetries}`)
-      return await apiCall()
+      console.log(`Detrack API call attempt ${attempt}/${maxRetries}`);
+      return await apiCall();
     } catch (error) {
-      lastError = error
-      console.error(`Detrack API call failed (attempt ${attempt}/${maxRetries}):`, error)
+      lastError = error;
+      console.error(
+        `Detrack API call failed (attempt ${attempt}/${maxRetries}):`,
+        error,
+      );
 
       if (attempt < maxRetries) {
         // Wait before retrying (with exponential backoff)
-        const backoffDelay = delayMs * Math.pow(2, attempt - 1)
-        console.log(`Retrying in ${backoffDelay}ms...`)
-        await new Promise((resolve) => setTimeout(resolve, backoffDelay))
+        const backoffDelay = delayMs * Math.pow(2, attempt - 1);
+        console.log(`Retrying in ${backoffDelay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, backoffDelay));
       }
     }
   }
 
   // If we get here, all retries failed
-  throw lastError
+  throw lastError;
 }

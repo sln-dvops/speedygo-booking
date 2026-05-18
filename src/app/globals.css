@@ -615,7 +615,46 @@ textarea:-moz-autofill {
   color: #ef4444;
   margin-top: 4px;
 }
+.field textarea {
+  width: 100%;
+  min-height: 90px;
+  padding: 20px 14px 8px;
+  font-size: 0.95rem;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+}
 
+.memo-count {
+  margin-top: 4px;
+  font-size: 0.9rem;
+  color: #373737;
+  text-align: right;
+}
+
+/* Hide placeholder like inputs */
+.field textarea::placeholder {
+  color: transparent;
+}
+
+/* Focus */
+.field textarea:focus {
+  outline: none;
+  border-color: #111827;
+}
+
+/* Floating label fix */
+.field textarea:focus + span,
+.field textarea:not(:placeholder-shown) + span {
+  top: 6px;
+  font-size: 0.7rem;
+  color: #6b7280;
+}
 .auth-container {
   max-width: 850px;
   margin: 80px auto;
@@ -1061,6 +1100,12 @@ table td, table th {
   font-weight: bold;
 }
 
+.waybill-info-text {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
 .waybill-scale {
   width: 100mm;
   height: 150mm;

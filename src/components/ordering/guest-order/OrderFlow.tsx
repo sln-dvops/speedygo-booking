@@ -35,6 +35,7 @@ export function OrderFlow() {
     recipientEmail: "",
     recipientLine1: "",
     recipientLine2: "",
+    recipientMemo: "",
     recipientPostalCode: "",
     parcelSize: "",
     deliveryMethod: undefined,
@@ -116,6 +117,7 @@ export function OrderFlow() {
         recipientEmail: data.email,
         recipientLine1: data.street,
         recipientLine2: data.unitNo,
+        recipientMemo: data.memo ?? "",
         recipientPostalCode: data.postalCode,
       }))
     }

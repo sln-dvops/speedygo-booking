@@ -7,12 +7,16 @@ export const singaporeAddressSchema = z.object({
   contactNumber: z
     .string()
     .regex(/^[0-9+\-\s]{1,30}$/, "Phone number can contain only digits, +, -, and spaces (max 30 characters)"),
-  email: z.string().email("Please enter a valid email address"),
+  email: z
+  .string()
+  .email("Please enter a valid email address")
+  .optional()
+  .or(z.literal("")),
   street: z.string().min(3, "Street address must be at least 3 characters"),
   unitNo: z
   .string()
-  .optional()
-  .or(z.literal("")),
+  .trim()
+  .min(1, "Please enter the unit number"),
   postalCode: z.string().regex(/^\d{6}$/, "Singapore postal codes must be 6 digits"),
 })
 

@@ -46,6 +46,7 @@ export function IndividualSendTo({ onPrevStep, onNextStep, formData, updateFormD
           onDataChange={updateFormData}
           onValidityChange={handleFormValidityChange}
           title="Recipient Information"
+          showMemo={true}
         />
       </CardContent>
       <CardFooter className="px-6 py-4 flex justify-between">
