@@ -170,7 +170,7 @@ export function DeliveryMethod({
                   </p>
                   <br></br>
                   <p className="text-sm text-black-600">
-                    Your parcel will be left at a safe location
+                    Best for regular parcel deliveries.
                   </p>
                 </div>
                 <Badge
@@ -199,7 +199,7 @@ export function DeliveryMethod({
                   <p className="font-medium text-black">Next-Day Doorstep Delivery</p>
                   <br></br>
                   <p className="text-sm text-black-600">
-                    Guaranteed to get by tomorrow
+                    For parcels that need to arrive by the next working day.
                   </p>
                 </div>
                 <Badge

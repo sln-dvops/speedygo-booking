@@ -7,6 +7,7 @@ import { DeliveryMethod } from "@/components/ordering/shared/DeliveryMethod"
 import { SendFrom } from "@/components/ordering/shared/SendFrom"
 import { BulkSendTo } from "@/components/ordering/bulk-order/BulkSendTo"
 import { Payment } from "@/components/ordering/shared/Payment"
+import { OrderProgressIndicator } from "../shared/OrderProgressIndicator"
 
 import type { ParcelDimensions as ParcelDimensionsType, DeliveryMethod as DeliveryMethodType } from "@/types/pricing"
 import type { OrderDetails, PartialOrderDetails, RecipientDetails } from "@/types/order"
@@ -104,8 +105,17 @@ export function BulkOrderFlow({ onBackToSelection }: { onBackToSelection: () => 
     }))
   }
 
+  const steps = [
+  "Parcel Details",
+  "Delivery Method",
+  "Sender Details",
+  "Recipients",
+  "Payment",
+];
+
   return (
     <>
+     <OrderProgressIndicator currentStep={currentStep} steps={steps} />
       <AnimatePresence mode="wait">
         {currentStep === 0 && (
           <motion.div

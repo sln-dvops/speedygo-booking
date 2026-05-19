@@ -35,7 +35,7 @@ export function OrderTypeSelection({ onNextStep }: OrderTypeSelectionProps) {
               />
             }
             title="Single Parcel"
-            description="Send a single parcel to once recipient. Perfect for sending gifts, documents, or small items."
+            description="Send a single parcel to one recipient. Perfect for sending gifts, documents, or small items."
             actionLabel="Select Single"
             onClick={() => onNextStep("individual")}
           />
@@ -50,7 +50,7 @@ export function OrderTypeSelection({ onNextStep }: OrderTypeSelectionProps) {
               />
             }
             title="Multiple Parcels"
-            description="Send multiple parcels to different recipients. Ideal for businesses or sending to multiple family members."
+            description="Send multiple parcels to different recipients. Ideal for businesses, bulk orders, or sending to multiple addresses."
             actionLabel="Select Multiple"
             onClick={() => onNextStep("bulk")}
           />

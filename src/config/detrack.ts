@@ -27,12 +27,12 @@ export function convertOrderToDetrackJob(order: OrderWithParcels): DetrackJob {
    const deliveryType =
     order.deliveryMethod === "standard"
       ? "Standard Delivery"
-      : "Next Day Delivery"
+      : "Guaranteed next-day"
 
   // Basic job data
   const job: DetrackJob = {
     type: DetrackJobType.DELIVERY,
-    delivery_type: deliveryType,
+    job_type: deliveryType,
     group_id: "699bd5fb1216402394cab205",
     group_name: "SpeedyGo!",
     // Use the order number (which should now be the short_id) as the DO number

@@ -7,7 +7,7 @@ import { DeliveryMethod } from "@/components/ordering/shared/DeliveryMethod"
 import { SendFrom } from "@/components/ordering/shared/SendFrom"
 import { IndividualSendTo } from "@/components/ordering/individual-order/IndividualSendTo"
 import { Payment } from "@/components/ordering/shared/Payment"
-
+import { OrderProgressIndicator } from "../shared/OrderProgressIndicator"
 import type { ParcelDimensions as ParcelDimensionsType, DeliveryMethod as DeliveryMethodType } from "@/types/pricing"
 import type { OrderDetails, PartialOrderDetails } from "@/types/order"
 import type { AddressFormData } from "@/components/ordering/shared/AddressForm"
@@ -93,8 +93,17 @@ export function IndividualOrderFlow({ onBackToSelection }: { onBackToSelection: 
     }))
   }
 
+  const steps = [
+  "Parcel Details",
+  "Delivery Method",
+  "Sender Details",
+  "Recipient Details",
+  "Payment",
+];
+
   return (
     <>
+    <OrderProgressIndicator currentStep={currentStep} steps={steps} />
       <AnimatePresence mode="wait">
         {currentStep === 0 && (
           <motion.div
