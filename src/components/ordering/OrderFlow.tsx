@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { OrderTypeSelection } from "@/components/ordering/shared/OrderTypeSelection";
 import { IndividualOrderFlow } from "@/components/ordering/individual-order/IndividualOrderFlow";
@@ -9,10 +9,12 @@ import { logoutAction } from "@/app/actions/ordering/guest-order/logout";
 import {
   ChevronLeft,
   ChevronRight,
+  Info,
   LayoutDashboard,
   Package,
   User,
 } from "lucide-react";
+import HowItWorksModal from "./HowItWorks";
 
 type OrderType = "individual" | "bulk" | null;
 
@@ -20,6 +22,36 @@ export function OrderFlow({ user }: { user: any }) {
   const [orderType, setOrderType] = useState<OrderType>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const isGuest = !user;
+const [showHowItWorks, setShowHowItWorks] = useState(false);
+useEffect(() => {
+  if (isGuest) {
+    setShowHowItWorks(true);
+    return;
+  }
+
+  const introKey = user?.id
+    ? `speedy_has_seen_booking_intro_${user.id}`
+    : "speedy_has_seen_booking_intro";
+
+  const hasSeenIntro = localStorage.getItem(introKey);
+
+  if (!hasSeenIntro) {
+    setShowHowItWorks(true);
+  }
+}, [isGuest, user?.id]);
+
+const handleCloseHowItWorks = () => {
+  setShowHowItWorks(false);
+
+  if (!isGuest) {
+    const introKey = user?.id
+      ? `speedy_has_seen_booking_intro_${user.id}`
+      : "speedy_has_seen_booking_intro";
+
+    localStorage.setItem(introKey, "true");
+  }
+};
 
   const handleOrderTypeSelection = (type: OrderType) => {
     setOrderType(type);
@@ -31,6 +63,12 @@ export function OrderFlow({ user }: { user: any }) {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
+
+      <HowItWorksModal
+      open={showHowItWorks}
+      onClose={handleCloseHowItWorks}
+      isGuest={isGuest}
+    />
       {/* 🔥 Sidebar */}
       <aside
         className={`
@@ -249,7 +287,19 @@ export function OrderFlow({ user }: { user: any }) {
             </button>
 
             <div>
-              <h2 className="text-lg md:text-xl font-semibold">Create Order</h2>
+              <div className="flex items-center gap-2">
+  <h2 className="text-lg md:text-xl font-semibold">Create Order</h2>
+
+  <button
+    type="button"
+    onClick={() => setShowHowItWorks(true)}
+    className="inline-flex h-3 w-3 items-center justify-center rounded-full text-gray-500 transition hover:bg-yellow-50 hover:text-yellow-400"
+    aria-label="Show how it works"
+    title="How it works"
+  >
+    <Info size={18} />
+  </button>
+</div>
 
               {user ? (
                 <p className="text-xs md:text-sm text-gray-600">
@@ -257,8 +307,7 @@ export function OrderFlow({ user }: { user: any }) {
                 </p>
               ) : (
                 <p className="text-xs md:text-sm text-gray-500">
-                  Hi, Guest. Please note down the tracking Ids of your orders
-                  for further uses.
+                  Hi Guest, please save your tracking ID for future reference.
                 </p>
               )}
             </div>

@@ -245,7 +245,7 @@ export function AddressForm({
         placeholder=" "
         maxLength={50}
       />
-      <span>Memo</span>
+      <span>Special Instructions / Memo</span>
       <p className="memo-count">{(formData.memo ?? "").length}/50</p>
     </div>
   </div>
