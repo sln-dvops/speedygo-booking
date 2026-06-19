@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SpeedyGo Booking
 
-## Getting Started
+**SpeedyGo Booking** is a delivery booking system designed to make parcel delivery simple, fast, and trackable.
+Users can create delivery bookings, make payments, and track parcel status, while the system supports logistics-side order management and delivery updates.
 
-First, run the development server:
+## Brief
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+SpeedyGo Booking helps customers book parcel deliveries online without needing manual back-and-forth communication. The system handles the full flow from booking creation to payment confirmation and delivery tracking.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+It is built for small-to-medium delivery businesses that want a cleaner digital booking experience for their customers.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+* User sign up and login
+* Guest booking support
+* Create single or bulk delivery bookings
+* Parcel price calculation based on weight and delivery options
+* Standard and next-day delivery options
+* Postal-code based surcharge handling
+* Online payment integration
+* Order confirmation page
+* Parcel tracking using unique tracking IDs
+* User dashboard for viewing past bookings
+* Delivery status updates
+* Detrack integration for delivery management
+* Webhook support for automated delivery status updates
+* Responsive UI for desktop and mobile
 
-## Learn More
+## Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+* **Frontend:** Next.js, React, TypeScript
+* **Styling:** Tailwind CSS, Shadcn UI
+* **Backend:** Next.js API Routes / Server Actions
+* **Database:** Supabase
+* **Authentication:** Supabase Auth
+* **Payment:** HitPay
+* **Delivery Integration:** Detrack API
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Goal
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The goal of SpeedyGo Booking is to reduce manual delivery booking work and provide customers with a smoother delivery experience.
 
-## Deploy on Vercel
+Instead of handling bookings through messages or forms manually, the platform allows users to book, pay, and track their parcels in one place.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Status
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is currently under active development.
+
+## Author
+
+Built by **Shun Lei Naing**
