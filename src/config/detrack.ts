@@ -80,9 +80,6 @@ export function convertOrderToDetrackJob(order: OrderWithParcels): DetrackJob {
 
     // Parcel details
     weight: firstParcel.weight,
-    parcel_length: firstParcel.length,
-    parcel_width: firstParcel.width,
-    parcel_height: firstParcel.height,
 
     // Additional details
     instructions: [

@@ -250,103 +250,23 @@ const {
       // Continue anyway - we've created the order
     }
 
-    // Create HitPay payment request
-    // Update the redirect URL to include the order ID
-    
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const redirectUrl = `${baseUrl}/order/${orderShortId}`;
-
-    const hitPayRequestBody = createHitPayRequestBody({
-      ...orderDetails,
-      orderNumber: orderShortId, // Use short_id instead of full UUID
-      redirectUrl: redirectUrl, // Override the default redirect URL
-      amount: finalAmount, // Use the validated server-calculated price
-    });
-
-    console.log(
-      "HitPay request body:",
-      JSON.stringify(hitPayRequestBody, null, 2),
-    );
-    console.log("Using HitPay API endpoint:", HITPAY_API_ENDPOINT);
-
-    const hitPayResponse = await fetch(HITPAY_API_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-BUSINESS-API-KEY": process.env.HITPAY_API_KEY || "",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-      body: JSON.stringify(hitPayRequestBody),
-    });
-    if (process.env.NEXT_PUBLIC_MOCK_PAYMENT === "true") {
-      console.log("⚠️ MOCK PAYMENT ENABLED");
-
-      return {
-        success: true,
-        orderId,
-        orderShortId,
-        paymentUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/order/${orderShortId}`,
-      };
-    }
-
-//     if (!hitPayResponse.ok) {
-//       const errorText = await hitPayResponse.text();
-//       console.error("HitPay API error response:", errorText);
-//       throw new Error(`HitPay API error: ${hitPayResponse.status} ${hitPayResponse.statusText}
-// ${errorText}`);
-//     }
-
-    const hitPayData: HitPayResponse = await hitPayResponse.json();
-    console.log("HitPay API response:", JSON.stringify(hitPayData, null, 2));
-
-    return {
-      success: true,
-      orderId,
-      orderShortId,
-      paymentUrl: hitPayData.url,
-    };
-  } catch (error) {
-    console.error("Order creation failed:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error occurred",
-    };
-  }
-}
-
-
-
-// MOCK PAYMENT TESTER CODE ----------------------------------------------------------------------------------------------------
-
 //     // Create HitPay payment request
 //     // Update the redirect URL to include the order ID
-//         // Create HitPay payment request
+    
 //     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 //     const redirectUrl = `${baseUrl}/order/${orderShortId}`;
 
-//     if (process.env.NEXT_PUBLIC_MOCK_PAYMENT === "true") {
-//       console.log("⚠️ MOCK PAYMENT ENABLED");
-
-//       return {
-//         success: true,
-//         orderId,
-//         orderShortId,
-//         paymentUrl: redirectUrl,
-//       };
-//     }
-
 //     const hitPayRequestBody = createHitPayRequestBody({
 //       ...orderDetails,
-//       orderNumber: orderShortId,
-//       redirectUrl,
-//       amount: finalAmount,
+//       orderNumber: orderShortId, // Use short_id instead of full UUID
+//       redirectUrl: redirectUrl, // Override the default redirect URL
+//       amount: finalAmount, // Use the validated server-calculated price
 //     });
 
 //     console.log(
 //       "HitPay request body:",
 //       JSON.stringify(hitPayRequestBody, null, 2),
 //     );
-
 //     console.log("Using HitPay API endpoint:", HITPAY_API_ENDPOINT);
 
 //     const hitPayResponse = await fetch(HITPAY_API_ENDPOINT, {
@@ -358,19 +278,25 @@ const {
 //       },
 //       body: JSON.stringify(hitPayRequestBody),
 //     });
+//     if (process.env.NEXT_PUBLIC_MOCK_PAYMENT === "true") {
+//       console.log("⚠️ MOCK PAYMENT ENABLED");
 
-//     if (!hitPayResponse.ok) {
-//       const errorText = await hitPayResponse.text();
-
-//       console.error("HitPay API error response:", errorText);
-
-//       throw new Error(
-//         `HitPay API error: ${hitPayResponse.status} ${hitPayResponse.statusText}\n${errorText}`,
-//       );
+//       return {
+//         success: true,
+//         orderId,
+//         orderShortId,
+//         paymentUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/order/${orderShortId}`,
+//       };
 //     }
 
-//     const hitPayData: HitPayResponse = await hitPayResponse.json();
+// //     if (!hitPayResponse.ok) {
+// //       const errorText = await hitPayResponse.text();
+// //       console.error("HitPay API error response:", errorText);
+// //       throw new Error(`HitPay API error: ${hitPayResponse.status} ${hitPayResponse.statusText}
+// // ${errorText}`);
+// //     }
 
+//     const hitPayData: HitPayResponse = await hitPayResponse.json();
 //     console.log("HitPay API response:", JSON.stringify(hitPayData, null, 2));
 
 //     return {
@@ -381,10 +307,84 @@ const {
 //     };
 //   } catch (error) {
 //     console.error("Order creation failed:", error);
-
 //     return {
 //       success: false,
 //       error: error instanceof Error ? error.message : "Unknown error occurred",
 //     };
 //   }
 // }
+
+
+
+// MOCK PAYMENT TESTER CODE ----------------------------------------------------------------------------------------------------
+
+    // Create HitPay payment request
+    // Update the redirect URL to include the order ID
+        // Create HitPay payment request
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const redirectUrl = `${baseUrl}/order/${orderShortId}`;
+
+    if (process.env.NEXT_PUBLIC_MOCK_PAYMENT === "true") {
+      console.log("⚠️ MOCK PAYMENT ENABLED");
+
+      return {
+        success: true,
+        orderId,
+        orderShortId,
+        paymentUrl: redirectUrl,
+      };
+    }
+
+    const hitPayRequestBody = createHitPayRequestBody({
+      ...orderDetails,
+      orderNumber: orderShortId,
+      redirectUrl,
+      amount: finalAmount,
+    });
+
+    console.log(
+      "HitPay request body:",
+      JSON.stringify(hitPayRequestBody, null, 2),
+    );
+
+    console.log("Using HitPay API endpoint:", HITPAY_API_ENDPOINT);
+
+    const hitPayResponse = await fetch(HITPAY_API_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-BUSINESS-API-KEY": process.env.HITPAY_API_KEY || "",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      body: JSON.stringify(hitPayRequestBody),
+    });
+
+    if (!hitPayResponse.ok) {
+      const errorText = await hitPayResponse.text();
+
+      console.error("HitPay API error response:", errorText);
+
+      throw new Error(
+        `HitPay API error: ${hitPayResponse.status} ${hitPayResponse.statusText}\n${errorText}`,
+      );
+    }
+
+    const hitPayData: HitPayResponse = await hitPayResponse.json();
+
+    console.log("HitPay API response:", JSON.stringify(hitPayData, null, 2));
+
+    return {
+      success: true,
+      orderId,
+      orderShortId,
+      paymentUrl: hitPayData.url,
+    };
+  } catch (error) {
+    console.error("Order creation failed:", error);
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
